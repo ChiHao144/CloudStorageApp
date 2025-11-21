@@ -1,6 +1,17 @@
-import "@/styles/globals.css";
-import type { AppProps } from "next/app";
+import type { AppProps } from 'next/app';
+import { AuthProvider } from '../context/AuthContext';
+import Navbar from '../components/Navbar';
+import Footer from '../components/Footer';
+import '../styles/globals.css';
 
-export default function App({ Component, pageProps }: AppProps) {
-  return <Component {...pageProps} />;
+export default function MyApp({ Component, pageProps }: AppProps) {
+    return (
+        <AuthProvider>
+            <Navbar />
+            <div className="container" style={{minHeight: '60vh'}}>
+                <Component {...pageProps} />
+            </div>
+            <Footer />
+        </AuthProvider>
+    );
 }
