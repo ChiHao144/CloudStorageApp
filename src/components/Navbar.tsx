@@ -6,19 +6,22 @@ export default function Navbar() {
     return (
         <nav className="navbar">
             <div className="container nav-container">
-                <div style={{fontWeight:'bold', fontSize:'1.5rem', color:'#0070f3'}}>☁️ CloudBox</div>
+                <div className="nav-brand">☁️ CloudBox</div> 
+                
                 <div className="nav-links">
                     {user ? (
                         <>
-                            <Link href="/">Dashboard</Link>
-                            <Link href="/upload">Upload</Link>
-                            <span>Hi, {user}</span>
-                            <span onClick={logout} style={{color:'red'}}>Logout</span>
+                            <Link href="/" className="nav-link">Dashboard</Link>
+                            <Link href="/upload" className="nav-link">Upload</Link>
+                            <Link href="/payment" className="nav-link">Payment</Link>
+                            
+                            <span className="nav-link nav-username">Hi, {user}</span>
+                            <span onClick={logout} className="nav-link logout-link">Logout</span>
                         </>
                     ) : (
                         <>
-                            <Link href="/login">Login</Link>
-                            <Link href="/register">Register</Link>
+                            <Link href="/login" className="nav-link">Login</Link>
+                            <Link href="/register" className="nav-link">Register</Link>
                         </>
                     )}
                 </div>

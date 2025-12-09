@@ -1,35 +1,87 @@
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { authApi } from '../services/api';
+import Link from 'next/link';
 
 export default function Login() {
     const [username, setUsername] = useState('');
+    const [password, setPassword] = useState('');
     const { login } = useAuth();
     const [loading, setLoading] = useState(false);
+    const [errorMsg, setErrorMsg] = useState('');
 
-    const handleLogin = async (e: any) => {
+    const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         setLoading(true);
-        await authApi.login(username, 'password'); // Gọi API giả
-        login(username); // Chuyển hướng vào dashboard
+        setErrorMsg('');
+        
+        try {
+            const res = await authApi.login(username, password);
+            
+            if (res.status === 200 && res.data.message) { 
+                login(username);
+                return;
+            }
+            
+            setErrorMsg(res.data?.message || 'Đăng nhập thất bại: Cấu trúc phản hồi không hợp lệ.');
+            
+        } catch (err: unknown) { 
+            let msg = 'Đăng nhập thất bại. Vui lòng kiểm tra tài khoản và mật khẩu.';
+            
+            if (typeof err === 'object' && err !== null && 'response' in err) {
+                const response = (err as { response: { data?: { error?: string, msg?: string }, status?: number } }).response;
+                if (response?.status === 401) {
+                    msg = response.data?.error || response.data?.msg || 'Thông tin xác thực không hợp lệ (401).';
+                } else if (response) {
+                    msg = `Lỗi ${response.status}: ${response.data?.msg || response.data?.error}`;
+                }
+            }
+            setErrorMsg(msg);
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
-        <div style={{maxWidth:'400px', margin:'50px auto', background:'white', padding:'30px', borderRadius:'10px', border:'1px solid #eee'}}>
-            <h2>Login</h2>
+        <div className="login-card">
+            <h2 className="login-title">Đăng nhập vào CloudBox</h2>
+            
+            {errorMsg && (
+                <div className="error-message">{errorMsg}</div>
+            )}
+            
             <form onSubmit={handleLogin}>
                 <div className="input-group">
-                    <label>Username</label>
-                    <input value={username} onChange={e=>setUsername(e.target.value)} required />
+                    <label className="input-label">Username</label>
+                    <input 
+                        type="text"
+                        value={username} 
+                        onChange={e=>setUsername(e.target.value)} 
+                        placeholder="Nhập tên đăng nhập"
+                        required 
+                    />
                 </div>
+                
                 <div className="input-group">
-                    <label>Password</label>
-                    <input type="password" value="123456" readOnly />
+                    <label className="input-label">Password</label>
+                    <input 
+                        type="password" 
+                        value={password} 
+                        onChange={e=>setPassword(e.target.value)}
+                        placeholder="Nhập mật khẩu"
+                        required 
+                    />
                 </div>
-                <button className="btn btn-primary" style={{width:'100%'}}>
-                    {loading ? 'Logging in...' : 'Login'}
+                
+                <button className="btn btn-primary login-button" disabled={loading}>
+                    {loading ? 'Đang xử lý...' : 'Đăng nhập'}
                 </button>
             </form>
+            
+            <p className="login-footer">
+                Chưa có tài khoản? 
+                <Link href="/register" className="footer-link">Đăng ký ngay</Link>
+            </p>
         </div>
     );
 }

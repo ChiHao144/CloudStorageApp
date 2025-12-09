@@ -1,24 +1,65 @@
-// src/services/api.ts
-// MOCK API để test giao diện
+import axios from 'axios';
+
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
+
+const api = axios.create({
+    baseURL: API_BASE_URL,
+});
+
+api.interceptors.response.use(
+    (response) => response,
+    (error) => {
+        console.error("API Error:", error.response?.data || error.message);
+        return Promise.reject(error);
+    }
+);
+
 export const authApi = {
-    register: (u: string, p: string) => 
-        new Promise((resolve) => setTimeout(() => resolve({ data: { status: 'success' } }), 1000)),
-    
-    login: (u: string, p: string) => 
-        new Promise((resolve) => {
-            // Giả lập đăng nhập thành công sau 1 giây
-            setTimeout(() => resolve({ 
-                data: { status: 'success', token: 'fake-jwt-token-123' } 
-            }), 1000);
-        }),
+    register: (username: string, password: string) => {
+        const formData = new URLSearchParams();
+        formData.append('username', username);
+        formData.append('password', password);
+
+        return api.post('/register', formData, {
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+        });
+    },
+
+    login: (username: string, password: string) => {
+        const formData = new URLSearchParams();
+        formData.append('username', username);
+        formData.append('password', password);
+
+        return api.post('/login', formData, {
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+        });
+    },
 };
 
 export const userApi = {
-    getUsage: (u: string) => 
-        new Promise((resolve) => setTimeout(() => resolve({ 
-            data: { used: 524288000, quota: 5368709120 } // 500MB / 5GB
-        }), 500)),
-    
-    uploadFile: (formData: any) => 
-        new Promise((resolve) => setTimeout(() => resolve({ data: { status: 'success' } }), 2000)),
+    getUsage: (username: string) =>
+        api.get(`/usage?username=${username}`),
+
+    uploadFile: (file: File, username: string, password: string) => {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('username', username);
+        formData.append('password', password); 
+
+        return api.post('/upload', formData, {
+        });
+    },
+
+    makePayment: (username: string, amount: number) => {
+        const formData = new URLSearchParams();
+        formData.append('username', username);
+        formData.append('amount', amount.toString()); 
+        
+        return api.post('/payment', formData, {
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
+        });
+    },
 };
+
+export default api;
