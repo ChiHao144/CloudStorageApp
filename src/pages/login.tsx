@@ -19,6 +19,7 @@ export default function Login() {
             const res = await authApi.login(username, password);
             
             if (res.status === 200 && res.data.message) { 
+                localStorage.setItem('password', password);
                 login(username);
                 return;
             }

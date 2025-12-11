@@ -60,6 +60,18 @@ export const userApi = {
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
         });
     },
+    
+    getQuota: (username: string, password: string) => {
+        
+        return api.get(`/quota?username=${username}&password=${password}`);
+    },
+
+    
+    getFiles: (username: string, password: string, path: string = "") => {
+        
+        const encodedPath = encodeURIComponent(path);
+        return api.get(`/files?username=${username}&password=${password}&path=${encodedPath}`);
+    }
 };
 
 export default api;

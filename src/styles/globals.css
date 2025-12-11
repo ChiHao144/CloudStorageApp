@@ -145,31 +145,39 @@ a { text-decoration: none; color: inherit; }
 }
 
 /* 6. File Card (Đồng bộ với Card style) */
-.file-card {
-    background: var(--card-bg); 
-    padding: 20px; 
-    border-radius: var(--border-radius-sm); 
-    border: 1px solid var(--border-color);
-    box-shadow: 0 1px 2px rgba(0,0,0,0.05); /* Shadow nhẹ */
+/* Thêm vào globals.css */
+
+.file-card-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    padding: 15px;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.08);
+    border: 1px solid #eee;
     transition: transform 0.2s, box-shadow 0.2s;
-    text-align: center;
+    cursor: pointer;
 }
-.file-card:hover {
+
+.file-card-wrapper:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
 }
+
 .file-icon {
-    font-size: 3rem; 
-    margin-bottom: 10px;
+    flex-shrink: 0; /* Đảm bảo icon không bị co lại */
 }
+
+.file-content {
+    flex-grow: 1;
+    overflow: hidden;
+}
+
 .file-name {
-    font-weight: bold;
-    word-break: break-word; /* Xử lý tên file dài */
-}
-.file-size {
-    color: #999; 
-    font-size: 0.9rem; 
-    margin-top: 5px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis; /* Cắt tên file dài */
 }
 
 

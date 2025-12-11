@@ -6,7 +6,8 @@ export default function Navbar() {
     return (
         <nav className="navbar">
             <div className="container nav-container">
-                <div className="nav-brand">☁️ CloudBox</div> 
+                
+                <Link href="/" className="nav-brand">☁️ CloudBox</Link> 
                 
                 <div className="nav-links">
                     {user ? (
