@@ -71,7 +71,32 @@ export const userApi = {
         
         const encodedPath = encodeURIComponent(path);
         return api.get(`/files?username=${username}&password=${password}&path=${encodedPath}`);
-    }
+    },
+
+     // 3. Xem nội dung file Text (GET /file-content)
+    viewFileContent: (username: string, password: string, filepath: string) => {
+        // Cần encode cả username và password để tránh lỗi ký tự đặc biệt
+        const u = encodeURIComponent(username);
+        const p = encodeURIComponent(password);
+        const f = encodeURIComponent(filepath);
+        return api.get(`/file-content?username=${u}&password=${p}&path=${f}`);
+    },
+
+    // 4. Lấy URL tải file/xem ảnh (GET /file-stream)
+    getDownloadUrl: (username: string, password: string, filepath: string) => {
+        const u = encodeURIComponent(username);
+        const p = encodeURIComponent(password);
+        const f = encodeURIComponent(filepath);
+        return `${API_BASE_URL}/file-stream?username=${u}&password=${p}&path=${f}`;
+    },
+
+    getFilesFolder: (username: string, password: string, filepath: string) => {
+        // Cần encode cả username và password để tránh lỗi ký tự đặc biệt
+        const u = encodeURIComponent(username);
+        const p = encodeURIComponent(password);
+        const f = encodeURIComponent(filepath);
+        return api.get(`/list-dir?username=${u}&password=${p}&path=${f}`);
+    },
 };
 
 export default api;

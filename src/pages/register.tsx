@@ -13,9 +13,9 @@ const validatePassword = (password: string): string | null => {
     if (!/[a-z]/.test(password)) {
         return "Mật khẩu phải chứa ít nhất 1 chữ thường.";
     }
-    if (!/[^a-zA-Z0-9\s]/.test(password)) {
-        return "Mật khẩu phải chứa ít nhất 1 ký tự đặc biệt.";
-    }
+    // if (!/[^a-zA-Z0-9\s]/.test(password)) {
+    //     return "Mật khẩu phải chứa ít nhất 1 ký tự đặc biệt.";
+    // }
     return null; 
 };
 
