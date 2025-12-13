@@ -194,9 +194,9 @@ export default function Dashboard() {
         }
 
         // C. Text/Code
-        if (fileNameLower.match(/\.(txt|md|json|xml|js|ts|py|html|css|log|java|c|cpp|docx)$/)) {
+        if (fileNameLower.match(/\.(txt|md|json|xml|js|ts|py|html|css|log|java|c|cpp|docx|pdf)$/)) {
             // Với docx/pdf nên mở tab mới vì API viewFileContent chỉ trả text
-            if (fileNameLower.match(/\.(docx|doc|pdf)$/)) {
+            if (fileNameLower.match(/\.(docx|doc)$/)) {
                  const downloadUrl = userApi.getDownloadUrl(user, password, relativeFilePath);
                  window.open(downloadUrl, '_blank');
                  return;

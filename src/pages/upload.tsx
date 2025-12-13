@@ -2,10 +2,12 @@ import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useRouter } from 'next/router';
 import { userApi } from '../services/api'; 
+
 export default function Upload() {
     const { user, isAuthenticated } = useAuth(); 
     const router = useRouter();
     const [password, setPassword] = useState('');
+    const [passwordError, setPasswordError] = useState(''); // State mới cho lỗi mật khẩu
     const [dragActive, setDragActive] = useState(false);
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
@@ -39,10 +41,27 @@ export default function Upload() {
             setSelectedFile(e.target.files[0]);
         }
     };
+    
+    // Xử lý thay đổi mật khẩu và xóa lỗi nếu có
+    const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setPassword(e.target.value);
+        if (passwordError && e.target.value) {
+            setPasswordError(''); // Xóa lỗi khi người dùng bắt đầu nhập
+        }
+    };
 
     const handleUpload = async () => {
-        if (!selectedFile || !user || !password) {
+        // Kiểm tra mật khẩu trước tiên
+        if (!password) {
+            setPasswordError("Vui lòng nhập mật khẩu để xác thực.");
             alert("Vui lòng chọn file và nhập mật khẩu.");
+            return;
+        } else {
+            setPasswordError(''); // Đảm bảo lỗi được xóa nếu có
+        }
+
+        if (!selectedFile || !user) {
+            alert("Vui lòng chọn file.");
             return;
         }
         
@@ -51,6 +70,7 @@ export default function Upload() {
         try {
             alert(`Đang tải lên file: ${originalFileName}...`);
             
+            // Giả sử userApi.uploadFile là hàm xử lý việc tải lên
             await userApi.uploadFile(selectedFile, user, password); 
             
             alert(`Tải lên thành công: ${originalFileName}!`);
@@ -68,8 +88,6 @@ export default function Upload() {
             }
             alert(`Lỗi khi tải lên: ${errMsg}`);
             console.error('Upload Error:', err);
-        } finally {
-           
         }
     };
 
@@ -82,11 +100,19 @@ export default function Upload() {
                 <input 
                     type="password" 
                     value={password} 
-                    onChange={e => setPassword(e.target.value)} 
+                    onChange={handlePasswordChange} // Sử dụng hàm handlePasswordChange mới
                     required 
-                    style={{width: '100%'}}
+                    style={{width: '100%', border: passwordError ? '1px solid red' : '1px solid #ccc'}}
                 />
+                {/* Hiển thị thông báo lỗi */}
+                {passwordError && (
+                    <p style={{color: 'red', marginTop: '5px'}}>
+                        {passwordError}
+                    </p>
+                )}
             </div>
+            
+            {/* Phần Drag and Drop không đổi */}
             <div 
                 style={{
                     height: '300px', 
@@ -120,8 +146,9 @@ export default function Upload() {
             
             {selectedFile && (
                 <div style={{marginTop: '20px', textAlign: 'center'}}>
-                    <p>File đã chọn: <strong>{selectedFile.name}</strong></p>
-                    <button onClick={handleUpload} className="btn btn-primary" disabled={!password}>
+                     <p>File đã chọn: <strong>{selectedFile.name}</strong></p>
+                    {/* Bỏ disabled để handleUpload tự kiểm tra mật khẩu và hiển thị lỗi */}
+                    <button onClick={handleUpload} className="btn btn-primary">
                         Upload File
                     </button>
                 </div>
