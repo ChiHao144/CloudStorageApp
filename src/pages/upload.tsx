@@ -7,9 +7,10 @@ export default function Upload() {
     const { user, isAuthenticated } = useAuth(); 
     const router = useRouter();
     const [password, setPassword] = useState('');
-    const [passwordError, setPasswordError] = useState(''); // State mới cho lỗi mật khẩu
+    const [passwordError, setPasswordError] = useState('');
     const [dragActive, setDragActive] = useState(false);
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
+    const [loading, setLoading] = useState(false);
 
     if (!isAuthenticated) {
         if (typeof window !== 'undefined') router.push('/login');
@@ -42,41 +43,27 @@ export default function Upload() {
         }
     };
     
-    // Xử lý thay đổi mật khẩu và xóa lỗi nếu có
     const handlePasswordChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         setPassword(e.target.value);
-        if (passwordError && e.target.value) {
-            setPasswordError(''); // Xóa lỗi khi người dùng bắt đầu nhập
-        }
+        if (passwordError && e.target.value) setPasswordError('');
     };
 
     const handleUpload = async () => {
-        // Kiểm tra mật khẩu trước tiên
         if (!password) {
             setPasswordError("Vui lòng nhập mật khẩu để xác thực.");
-            alert("Vui lòng chọn file và nhập mật khẩu.");
             return;
-        } else {
-            setPasswordError(''); // Đảm bảo lỗi được xóa nếu có
-        }
-
+        } 
         if (!selectedFile || !user) {
             alert("Vui lòng chọn file.");
             return;
         }
         
-        const originalFileName = selectedFile.name;
-        
+        setLoading(true);
         try {
-            alert(`Đang tải lên file: ${originalFileName}...`);
-            
-            // Giả sử userApi.uploadFile là hàm xử lý việc tải lên
             await userApi.uploadFile(selectedFile, user, password); 
-            
-            alert(`Tải lên thành công: ${originalFileName}!`);
+            alert(`Tải lên thành công: ${selectedFile.name}!`);
             setSelectedFile(null); 
             setPassword(''); 
-            
         } catch (err: unknown) {
             let errMsg = 'Không thể tải lên file.';
             
@@ -92,67 +79,68 @@ export default function Upload() {
     };
 
     return (
-        <div>
-            <h1>Upload File cho {user}</h1>
+        <div className="max-w-2xl mx-auto py-10 px-4">
+            <h1 className="text-3xl font-bold text-gray-800 mb-8 text-center">Tải lên tệp tin</h1>
             
-            <div className="input-group" style={{marginBottom: '20px'}}>
-                <label>Nhập lại Mật khẩu để Xác thực</label>
-                <input 
-                    type="password" 
-                    value={password} 
-                    onChange={handlePasswordChange} // Sử dụng hàm handlePasswordChange mới
-                    required 
-                    style={{width: '100%', border: passwordError ? '1px solid red' : '1px solid #ccc'}}
-                />
-                {/* Hiển thị thông báo lỗi */}
-                {passwordError && (
-                    <p style={{color: 'red', marginTop: '5px'}}>
-                        {passwordError}
-                    </p>
-                )}
-            </div>
-            
-            {/* Phần Drag and Drop không đổi */}
-            <div 
-                style={{
-                    height: '300px', 
-                    border: `2px dashed ${dragActive ? '#0070f3' : '#ccc'}`, 
-                    borderRadius: '10px',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    background: dragActive ? '#f0f8ff' : 'white',
-                    transition: 'all 0.2s'
-                }}
-                onDragEnter={handleDrag}
-                onDragLeave={handleDrag}
-                onDragOver={handleDrag}
-                onDrop={handleDrop}
-            >
-                <div style={{fontSize: '3rem', color: '#ccc'}}>⬆️</div>
-                <p>Drag and drop a file here</p>
-                <p>or</p>
-                <label htmlFor="file-upload" className="btn btn-secondary">
-                    Select a file
-                </label>
-                <input 
-                    id="file-upload" 
-                    type="file" 
-                    style={{display: 'none'}} 
-                    onChange={handleChange} 
-                />
-            </div>
-            
-            {selectedFile && (
-                <div style={{marginTop: '20px', textAlign: 'center'}}>
-                     <p>File đã chọn: <strong>{selectedFile.name}</strong></p>
-                    {/* Bỏ disabled để handleUpload tự kiểm tra mật khẩu và hiển thị lỗi */}
-                    <button onClick={handleUpload} className="btn btn-primary">
-                        Upload File
-                    </button>
+            <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 space-y-8">
+                {/* Password Input */}
+                <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Xác thực mật khẩu <span className="text-red-500">*</span>
+                    </label>
+                    <input 
+                        type="password" 
+                        value={password} 
+                        onChange={handlePasswordChange}
+                        className={`w-full px-4 py-3 rounded-lg border focus:outline-none focus:ring-2 transition-all ${passwordError ? 'border-red-500 focus:ring-red-500/50' : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500/50'}`}
+                        placeholder="Nhập mật khẩu để tiếp tục"
+                        required 
+                    />
+                    {passwordError && <p className="mt-2 text-sm text-red-600">{passwordError}</p>}
                 </div>
-            )}
+                
+                {/* Drag & Drop Area */}
+                <div 
+                    className={`relative border-2 border-dashed rounded-xl p-10 flex flex-col items-center justify-center transition-all duration-200 cursor-pointer group ${dragActive ? 'border-blue-500 bg-blue-50' : 'border-gray-300 bg-gray-50 hover:bg-gray-100 hover:border-gray-400'}`}
+                    onDragEnter={handleDrag}
+                    onDragLeave={handleDrag}
+                    onDragOver={handleDrag}
+                    onDrop={handleDrop}
+                >
+                    <input 
+                        id="file-upload" 
+                        type="file" 
+                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                        onChange={handleChange} 
+                    />
+                    
+                    <div className="text-5xl mb-4 group-hover:scale-110 transition-transform text-gray-400 group-hover:text-blue-500">
+                        ☁️
+                    </div>
+                    
+                    {selectedFile ? (
+                        <div className="text-center">
+                            <p className="text-lg font-medium text-blue-600 break-all">{selectedFile.name}</p>
+                            <p className="text-sm text-gray-500 mt-1">{(selectedFile.size / 1024 / 1024).toFixed(2)} MB</p>
+                            <span className="mt-3 inline-block px-3 py-1 bg-blue-100 text-blue-700 text-xs font-semibold rounded-full">Đã chọn</span>
+                        </div>
+                    ) : (
+                        <div className="text-center space-y-2">
+                            <p className="text-lg font-medium text-gray-700">Kéo thả file vào đây</p>
+                            <p className="text-sm text-gray-500">hoặc nhấn để chọn file từ máy</p>
+                        </div>
+                    )}
+                </div>
+                
+                {/* Action Button */}
+                <button 
+                    onClick={handleUpload} 
+                    disabled={!selectedFile || loading}
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white font-semibold py-3 rounded-lg transition-all shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex justify-center items-center"
+                >
+                    {loading ? <div className="loader w-5 h-5 border-2 border-white/30 border-t-white"></div> : 'Tải lên ngay'}
+                </button>
+            </div>
         </div>
     );
 }

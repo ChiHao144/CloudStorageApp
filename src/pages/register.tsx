@@ -4,21 +4,11 @@ import { useRouter } from 'next/router';
 import Link from 'next/link';
 
 const validatePassword = (password: string): string | null => {
-    if (password.length < 10) {
-        return "Mật khẩu phải có ít nhất 10 ký tự.";
-    }
-    if (!/[A-Z]/.test(password)) {
-        return "Mật khẩu phải chứa ít nhất 1 chữ hoa.";
-    }
-    if (!/[a-z]/.test(password)) {
-        return "Mật khẩu phải chứa ít nhất 1 chữ thường.";
-    }
-    // if (!/[^a-zA-Z0-9\s]/.test(password)) {
-    //     return "Mật khẩu phải chứa ít nhất 1 ký tự đặc biệt.";
-    // }
+    if (password.length < 10) return "Mật khẩu phải có ít nhất 10 ký tự.";
+    if (!/[A-Z]/.test(password)) return "Mật khẩu phải chứa ít nhất 1 chữ hoa.";
+    if (!/[a-z]/.test(password)) return "Mật khẩu phải chứa ít nhất 1 chữ thường.";
     return null; 
 };
-
 
 export default function Register() {
     const [username, setUsername] = useState('');
@@ -45,7 +35,7 @@ export default function Register() {
             setMsg('Đăng ký thành công! Đang chuyển hướng...');
             setIsError(false);
             setTimeout(() => router.push('/login'), 2000);
-        } catch (err: unknown) { 
+         } catch (err: unknown) { 
             let errorMsg = 'Không thể đăng ký. Vui lòng thử lại.';
             
             if (typeof err === 'object' && err !== null && 'response' in err) {
@@ -71,43 +61,65 @@ export default function Register() {
     };
 
     return (
-        <div className="login-card"> 
-            <h2 className="login-title">Đăng ký Tài khoản</h2>
-            
-            {msg && (
-                <div className={isError ? "error-message" : "success-message"}>{msg}</div>
-            )}
-            
-            <form onSubmit={handleSubmit}>
-                <div className="input-group">
-                    <label className="input-label">Username</label>
-                    <input 
-                        type="text" 
-                        value={username} 
-                        onChange={(e) => setUsername(e.target.value)} 
-                        placeholder="Chọn tên đăng nhập"
-                        required 
-                    />
+        <div className="flex min-h-[80vh] items-center justify-center bg-gray-50 px-4">
+            <div className="w-full max-w-md space-y-8 rounded-2xl bg-white p-8 shadow-xl border border-gray-100">
+                <div className="text-center">
+                    <h2 className="mt-2 text-3xl font-extrabold text-gray-900">Tạo tài khoản</h2>
+                    <p className="mt-2 text-sm text-gray-600">Tham gia CloudBox ngay hôm nay</p>
                 </div>
+
+                {msg && (
+                    <div className={`rounded-lg p-4 text-sm flex items-center gap-2 ${isError ? 'bg-red-50 text-red-600 border border-red-200' : 'bg-green-50 text-green-700 border border-green-200'}`}>
+                        {msg}
+                    </div>
+                )}
+
+                <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+                    <div className="space-y-4">
+                        <div>
+                            <label className="mb-1 block text-sm font-medium text-gray-700">Tên đăng nhập</label>
+                            <input 
+                                type="text" 
+                                value={username} 
+                                onChange={(e) => setUsername(e.target.value)} 
+                                className="block w-full rounded-lg border border-gray-300 px-4 py-3 text-gray-900 placeholder-gray-500 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/50 sm:text-sm transition-all"
+                                placeholder="Chọn tên đăng nhập"
+                                required 
+                            />
+                        </div>
+                        
+                        <div>
+                            <label className="mb-1 block text-sm font-medium text-gray-700">Mật khẩu</label>
+                            <input 
+                                type="password" 
+                                value={password} 
+                                onChange={(e) => setPassword(e.target.value)} 
+                                className={`block w-full rounded-lg border px-4 py-3 text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 sm:text-sm transition-all ${passwordError ? 'border-red-500 focus:ring-red-500/50' : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500/50'}`}
+                                placeholder="••••••••"
+                                required 
+                            />
+                            {passwordError && (
+                                <p className="mt-1 text-xs text-red-600">{passwordError}</p>
+                            )}
+                            <p className="mt-2 text-xs text-gray-500">Mật khẩu cần ít nhất 10 ký tự, bao gồm chữ hoa và chữ thường.</p>
+                        </div>
+                    </div>
+
+                    <button 
+                        type="submit" 
+                        className="group relative flex w-full justify-center rounded-lg bg-blue-600 px-4 py-3 text-sm font-semibold text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all shadow-md hover:shadow-lg"
+                    >
+                        Đăng ký
+                    </button>
+                </form>
                 
-                <div className="input-group">
-                    <label className="input-label">Password</label>
-                    <input 
-                        type="password" 
-                        value={password} 
-                        onChange={(e) => setPassword(e.target.value)} 
-                        required 
-                        placeholder="Mật khẩu (>= 10 ký tự, có Hoa, thường, đặc biệt)"
-                    />
-                    {passwordError && (
-                        <div className="input-error">{passwordError}</div>
-                    )}
-                </div>
-                
-                <button type="submit" className="btn btn-primary login-button">Register</button>
-            </form>
-            
-            <Link href="/login" className="footer-link">Đăng nhập ngay</Link>
+                <p className="text-center text-sm text-gray-600">
+                    Đã có tài khoản?{' '}
+                    <Link href="/login" className="font-medium text-blue-600 hover:text-blue-500 hover:underline">
+                        Đăng nhập ngay
+                    </Link>
+                </p>
+            </div>
         </div>
     );
 }

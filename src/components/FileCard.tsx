@@ -4,52 +4,42 @@ interface FileCardProps {
     name: string;
     size: string;
     type: 'file' | 'directory';
-    modified: string; 
+    modified?: string;
 }
-
 
 const getIconByType = (type: string) => {
-    if (type === 'directory') {
-        return '📁'; 
-    }
-   
-    return '📄'; 
-}
-
-
-const formatModifiedDate = (dateString: string) => {
-    try {
-        
-        return new Date(dateString).toLocaleString();
-    } catch {
-        return dateString;
-    }
+    if (type === 'directory') return '📁';
+    return '📄';
 }
 
 export default function FileCard({ name, size, type, modified }: FileCardProps) {
-    
-    const displaySize = type === 'file' ? size : '— Folder';
+    const displaySize = type === 'file' ? size : 'Folder';
 
     return (
-        <div className="file-card-wrapper">
-            
-            <div className="file-icon" style={{fontSize: '1.5rem'}}>
-                {getIconByType(type)}
+        <div className="group bg-white p-4 rounded-xl border border-gray-200 shadow-sm hover:shadow-md hover:border-blue-300 transition-all duration-200 cursor-pointer flex flex-col gap-3 h-full">
+            <div className="flex items-start justify-between">
+                <div className="text-4xl group-hover:scale-110 transition-transform duration-200">
+                    {getIconByType(type)}
+                </div>
+                <div className={`text-xs px-2 py-1 rounded-full ${type === 'directory' ? 'bg-yellow-100 text-yellow-700' : 'bg-blue-50 text-blue-600'}`}>
+                    {type === 'directory' ? 'Thư mục' : 'File'}
+                </div>
             </div>
             
-            
-            <div className="file-content">
-                <div className="file-name" style={{fontWeight: 'bold'}}>
+            <div className="flex-1">
+                <h3 className="font-semibold text-gray-800 truncate" title={name}>
                     {name}
-                </div>
-                <div className="file-size" style={{fontSize: '0.85rem', color: '#666'}}>
-                    {displaySize}
-                </div>
-               
-                <div className="file-modified" style={{fontSize: '0.75rem', color: '#999'}}>
-                    Cập nhật: {formatModifiedDate(modified)}
+                </h3>
+                <div className="flex justify-between items-end mt-2">
+                    <span className="text-sm text-gray-500 font-medium">{displaySize}</span>
                 </div>
             </div>
+
+            {modified && (
+                <div className="text-xs text-gray-400 border-t pt-2 mt-1">
+                    {new Date(modified).toLocaleDateString('vi-VN')}
+                </div>
+            )}
         </div>
     );
 }
