@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { authApi } from '../services/api';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
+import Swal from 'sweetalert2';
 
 const validatePassword = (password: string): string | null => {
     if (password.length < 10) return "Mật khẩu phải có ít nhất 10 ký tự.";
@@ -13,50 +14,58 @@ const validatePassword = (password: string): string | null => {
 export default function Register() {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
-    const [msg, setMsg] = useState('');
-    const [isError, setIsError] = useState(false);
     const [passwordError, setPasswordError] = useState<string | null>(null); 
     const router = useRouter();
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        setMsg('');
         setPasswordError(null);
 
         const validationError = validatePassword(password);
         if (validationError) {
             setPasswordError(validationError);
-            setIsError(true);
+            Swal.fire({
+                icon: 'warning',
+                title: 'Mật khẩu chưa đủ mạnh',
+                text: validationError,
+            });
             return;
         }
 
         try {
             await authApi.register(username, password);
-            setMsg('Đăng ký thành công! Đang chuyển hướng...');
-            setIsError(false);
-            setTimeout(() => router.push('/login'), 2000);
-         } catch (err: unknown) { 
+            
+            await Swal.fire({
+                icon: 'success',
+                title: 'Đăng ký thành công!',
+                text: 'Đang chuyển hướng đến trang đăng nhập...',
+                timer: 2000,
+                showConfirmButton: false
+            });
+            
+            router.push('/login');
+        } catch (err: unknown) { 
             let errorMsg = 'Không thể đăng ký. Vui lòng thử lại.';
             
             if (typeof err === 'object' && err !== null && 'response' in err) {
                 const response = (err as { response: { data?: { error?: string, msg?: string }, status?: number } }).response;
-
                 if (response?.status === 400 && response.data?.error) {
-                    const errorText = response.data.error.toLowerCase();
-                    
+                    const errorText = String(response.data.error).toLowerCase();
                     if (errorText.includes("already exists") || errorText.includes("user already registered")) {
-                        errorMsg = 'Lỗi: Tên đăng nhập này đã tồn tại. Vui lòng chọn tên khác.';
+                        errorMsg = 'Tên đăng nhập này đã tồn tại.';
                     } else {
                         errorMsg = 'Lỗi: ' + response.data.error; 
                     }
                 } else if (response) {
                     errorMsg = `Lỗi ${response.status}: Vui lòng kiểm tra kết nối server.`;
                 }
-            } else if (err instanceof Error) {
-                errorMsg = 'Lỗi: ' + err.message;
             }
-            setMsg(errorMsg);
-            setIsError(true);
+            
+            Swal.fire({
+                icon: 'error',
+                title: 'Đăng ký thất bại',
+                text: errorMsg
+            });
         }
     };
 
@@ -67,12 +76,6 @@ export default function Register() {
                     <h2 className="mt-2 text-3xl font-extrabold text-gray-900">Tạo tài khoản</h2>
                     <p className="mt-2 text-sm text-gray-600">Tham gia CloudBox ngay hôm nay</p>
                 </div>
-
-                {msg && (
-                    <div className={`rounded-lg p-4 text-sm flex items-center gap-2 ${isError ? 'bg-red-50 text-red-600 border border-red-200' : 'bg-green-50 text-green-700 border border-green-200'}`}>
-                        {msg}
-                    </div>
-                )}
 
                 <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
                     <div className="space-y-4">

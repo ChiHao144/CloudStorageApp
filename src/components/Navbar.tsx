@@ -2,6 +2,7 @@ import Link from 'next/link';
 import { useAuth } from '../context/AuthContext';
 import { useState } from 'react';
 import { MdOutlineWbCloudy } from "react-icons/md";
+import Swal from 'sweetalert2';
 
 export default function Navbar() {
     const { user, logout } = useAuth();
@@ -9,6 +10,31 @@ export default function Navbar() {
 
     const toggleMenu = () => setIsMobileMenuOpen(!isMobileMenuOpen);
     const closeMenu = () => setIsMobileMenuOpen(false);
+
+    const handleLogout = async () => {
+        const result = await Swal.fire({
+            title: 'Đăng xuất?',
+            text: "Bạn có chắc chắn muốn đăng xuất khỏi tài khoản?",
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Đăng xuất',
+            cancelButtonText: 'Ở lại'
+        });
+
+        if (result.isConfirmed) {
+            logout();
+            closeMenu();
+            Swal.fire({
+                title: 'Đã đăng xuất!',
+                text: 'Hẹn gặp lại bạn sớm.',
+                icon: 'success',
+                timer: 1500,
+                showConfirmButton: false
+            });
+        }
+    };
 
     return (
         <nav className="bg-white shadow-sm sticky top-0 z-50">
@@ -35,7 +61,7 @@ export default function Navbar() {
                                 <div className="flex items-center gap-4 ml-4 pl-4 border-l border-gray-200">
                                     <span className="text-sm text-gray-500">Xin chào, <span className="font-semibold text-gray-800">{user}</span></span>
                                     <button
-                                        onClick={logout}
+                                        onClick={handleLogout}
                                         className="bg-red-50 text-red-600 px-4 py-2 rounded-lg text-sm font-medium hover:bg-red-100 transition-colors"
                                     >
                                         Đăng xuất
@@ -91,7 +117,7 @@ export default function Navbar() {
                                     Payment
                                 </Link>
                                 <button
-                                    onClick={() => { logout(); closeMenu(); }}
+                                    onClick={handleLogout}
                                     className="w-full text-left mt-2 block px-3 py-2 rounded-md text-base font-medium text-red-600 hover:bg-red-50"
                                 >
                                     Đăng xuất

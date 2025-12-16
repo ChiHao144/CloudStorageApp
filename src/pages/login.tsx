@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { authApi } from '../services/api';
+import Swal from 'sweetalert2'; 
 import Link from 'next/link';
 
 export default function Login() {
@@ -8,33 +9,47 @@ export default function Login() {
     const [password, setPassword] = useState('');
     const { login } = useAuth();
     const [loading, setLoading] = useState(false);
-    const [errorMsg, setErrorMsg] = useState('');
 
     const handleLogin = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         setLoading(true);
-        setErrorMsg('');
         
         try {
             const res = await authApi.login(username, password);
             if (res.status === 200 && res.data.message) { 
                 localStorage.setItem('password', password); 
+                
+                await Swal.fire({
+                    icon: 'success',
+                    title: 'Đăng nhập thành công!',
+                    text: 'Chào mừng bạn quay trở lại.',
+                    timer: 2000,
+                    showConfirmButton: false
+                });
+
                 login(username);
                 return;
             }
-            setErrorMsg(res.data?.message || 'Đăng nhập thất bại.');
-        } catch (err: unknown) { 
-            let msg = 'Đăng nhập thất bại. Vui lòng kiểm tra tài khoản và mật khẩu.';
             
+            Swal.fire({
+                icon: 'error',
+                title: 'Đăng nhập thất bại',
+                text: res.data?.message || 'Có lỗi xảy ra.',
+            });
+
+        } catch (err: unknown) {
+            let msg = 'Đăng nhập thất bại.';
             if (typeof err === 'object' && err !== null && 'response' in err) {
                 const response = (err as { response: { data?: { error?: string, msg?: string }, status?: number } }).response;
-                if (response?.status === 401) {
-                    msg = response.data?.error || response.data?.msg || 'Thông tin xác thực không hợp lệ (401).';
-                } else if (response) {
-                    msg = `Lỗi ${response.status}: ${response.data?.msg || response.data?.error}`;
-                }
+                if (response?.status === 401) msg = 'Sai tài khoản hoặc mật khẩu.';
+                else if (response) msg = msg = `Lỗi ${response.status}: ${response.data?.msg || response.data?.error}`;
             }
-            setErrorMsg(msg);
+            
+            Swal.fire({
+                icon: 'error',
+                title: 'Lỗi',
+                text: msg,
+            });
         } finally {
             setLoading(false);
         }
@@ -49,15 +64,6 @@ export default function Login() {
                         Quản lý dữ liệu đám mây của bạn
                     </p>
                 </div>
-
-                {errorMsg && (
-                    <div className="rounded-lg bg-red-50 p-4 text-sm text-red-600 border border-red-200 flex items-center gap-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                            <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                        </svg>
-                        {errorMsg}
-                    </div>
-                )}
 
                 <form className="mt-8 space-y-6" onSubmit={handleLogin}>
                     <div className="space-y-4 rounded-md shadow-sm">

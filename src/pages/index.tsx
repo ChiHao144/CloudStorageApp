@@ -1,10 +1,10 @@
 import { useAuth } from '../context/AuthContext';
 import FileCard from '../components/FileCard';
 import { useRouter } from 'next/router';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { userApi } from '../services/api';
 import { PiHandWavingBold } from "react-icons/pi";
-
+import Swal from 'sweetalert2'; 
 
 const formatBytes = (bytes: number | string, decimals = 2) => {
     const numBytes = typeof bytes === 'string' ? parseInt(bytes) : bytes;
@@ -41,60 +41,98 @@ export default function Dashboard() {
     const [error, setError] = useState('');
     const [currentPath, setCurrentPath] = useState('');
     const [previewContent, setPreviewContent] = useState<string | null>(null);
-    const [previewType, setPreviewType] = useState<'image' | 'video' | 'text' | null>(null);
+    const [previewType, setPreviewType] = useState<'image' | 'video' | 'text' | 'pdf' | null>(null);
     const [viewLoading, setViewLoading] = useState(false);
+
+    const fetchData = useCallback(async () => {
+        if (!user) return;
+        const password = localStorage.getItem('password'); 
+        if (!password) { 
+            Swal.fire('Lỗi', 'Vui lòng đăng xuất và đăng nhập lại.', 'error');
+            setLoading(false); 
+            return; 
+        }
+        
+        try {
+            let filesApiCall;
+            if (currentPath) filesApiCall = userApi.getFilesFolder(user, password, currentPath);
+            else filesApiCall = userApi.getFiles(user, password);
+
+            const [quotaRes, filesRes] = await Promise.allSettled([
+                userApi.getQuota(user, password),
+                filesApiCall
+            ]);
+
+            const isQuotaResponseValid = (data: unknown): data is { quota: QuotaData } => {
+                if (typeof data !== 'object' || data === null) return false;
+                const d = data as { quota?: unknown };
+                return typeof d.quota === 'object' && d.quota !== null && 'used' in (d.quota as object);
+            };
+
+            if (quotaRes.status === 'fulfilled' && isQuotaResponseValid(quotaRes.value.data)) {
+                setQuota(quotaRes.value.data.quota);
+            }
+            if (filesRes.status === 'fulfilled') {
+                const data = filesRes.value.data as { files?: unknown; items?: unknown };
+                const rawList = (Array.isArray(data.items) ? data.items : (Array.isArray(data.files) ? data.files : [])) as FileItem[];
+                if (rawList.length > 0) {
+                    const meaningfulItems = rawList.filter(f => {
+                        const name = f.name ? decodeURIComponent(f.name) : getFileNameFromPath(f.path);
+                        if (!name || name === user) return false;
+                        if (currentPath) {
+                            let p = decodeURIComponent(f.path);
+                            if (p.endsWith('/')) p = p.slice(0, -1);
+                            if (p === currentPath || p.endsWith(`/${currentPath}`)) return false;
+                        }
+                        return true; 
+                    });
+                    setFiles(meaningfulItems);
+                } else setFiles([]); 
+            }
+        } catch (err) { 
+            console.error(err); 
+            setError("Có lỗi xảy ra khi tải dữ liệu."); 
+        } finally { setLoading(false); }
+    }, [user, currentPath]);
 
     useEffect(() => {
         if (!isAuthenticated) { router.push('/login'); return; }
-        const isQuotaResponseValid = (data: unknown): data is { quota: QuotaData } => {
-            if (typeof data !== 'object' || data === null) return false;
-            const d = data as { quota?: unknown };
-            return typeof d.quota === 'object' && d.quota !== null && 'used' in (d.quota as object);
-        };
-        const fetchData = async () => {
-            if (!user) return;
-            const password = localStorage.getItem('password');
-            if (!password) { setError("Vui lòng đăng xuất và đăng nhập lại."); setLoading(false); return; }
-            setLoading(true);
-            try {
-                let filesApiCall;
-                if (currentPath) filesApiCall = userApi.getFilesFolder(user, password, currentPath);
-                else filesApiCall = userApi.getFiles(user, password);
-
-                const [quotaRes, filesRes] = await Promise.allSettled([
-                    userApi.getQuota(user, password),
-                    filesApiCall
-                ]);
-
-                if (quotaRes.status === 'fulfilled' && isQuotaResponseValid(quotaRes.value.data)) {
-                    setQuota(quotaRes.value.data.quota);
-                }
-                if (filesRes.status === 'fulfilled') {
-                    const data = filesRes.value.data as { files?: unknown; items?: unknown };
-                    const rawList = (Array.isArray(data.items) ? data.items : (Array.isArray(data.files) ? data.files : [])) as FileItem[];
-                    if (rawList.length > 0) {
-                        const meaningfulItems = rawList.filter(f => {
-                            const name = f.name ? decodeURIComponent(f.name) : getFileNameFromPath(f.path);
-                            if (!name || name === user) return false;
-                            if (currentPath) {
-                                let p = decodeURIComponent(f.path);
-                                if (p.endsWith('/')) p = p.slice(0, -1);
-                                if (p === currentPath || p.endsWith(`/${currentPath}`)) return false;
-                            }
-                            return true;
-                        });
-                        meaningfulItems.sort((a, b) => {
-                            const dateA = new Date(a.modified).getTime();
-                            const dateB = new Date(b.modified).getTime();
-                            return dateB - dateA;
-                        });
-                        setFiles(meaningfulItems);
-                    } else setFiles([]);
-                }
-            } catch (err) { console.error(err); setError("Có lỗi xảy ra khi tải dữ liệu."); } finally { setLoading(false); }
-        };
         fetchData();
-    }, [isAuthenticated, user, router, currentPath]);
+    }, [isAuthenticated, user, router, currentPath, fetchData]);
+
+    const handleDelete = async (e: React.MouseEvent, item: FileItem) => {
+        e.stopPropagation();
+        
+        const itemName = item.name ? decodeURIComponent(item.name) : getFileNameFromPath(item.path);
+        const typeText = item.type === 'directory' ? 'thư mục' : 'file';
+
+        const result = await Swal.fire({
+            title: `Xóa ${typeText}?`,
+            text: `Bạn có chắc chắn muốn xóa "${itemName}" không? Hành động này không thể hoàn tác.`,
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#d33',
+            cancelButtonColor: '#3085d6',
+            confirmButtonText: 'Xóa ngay',
+            cancelButtonText: 'Hủy bỏ'
+        });
+
+        if (!result.isConfirmed) return;
+
+        const password = localStorage.getItem('password');
+        if (!user || !password) return;
+
+        const relativeFilePath = currentPath ? `${currentPath}/${itemName}` : itemName;
+
+        try {
+            await userApi.deleteFile(user, password, relativeFilePath);
+            await fetchData();
+            Swal.fire('Đã xóa!', `${typeText} đã được xóa thành công.`, 'success');
+        } catch (err) {
+            console.error(err);
+            Swal.fire('Lỗi!', 'Không thể xóa file. Vui lòng thử lại.', 'error');
+        }
+    };
 
     const handleItemClick = async (item: FileItem) => {
         const itemName = item.name ? decodeURIComponent(item.name) : getFileNameFromPath(item.path);
@@ -103,6 +141,7 @@ export default function Dashboard() {
             const currentFolder = currentPath.split('/').pop();
             if (itemName === currentFolder) return;
             setCurrentPath(newPath);
+            setLoading(true);
             return;
         }
         const password = localStorage.getItem('password');
@@ -118,19 +157,28 @@ export default function Dashboard() {
             const videoUrl = userApi.getDownloadUrl(user, password, relativeFilePath);
             setPreviewType('video'); setPreviewContent(videoUrl); return;
         }
-        if (fileNameLower.match(/\.(txt|md|json|xml|js|ts|py|html|css|log|java|c|cpp|docx|pdf)$/)) {
-            if (fileNameLower.match(/\.(doc)$/)) {
-                const downloadUrl = userApi.getDownloadUrl(user, password, relativeFilePath);
-                window.open(downloadUrl, '_blank'); return;
-            }
+
+       
+        if (fileNameLower.match(/\.(pdf)$/)) {
+            const pdfUrl = userApi.getDownloadUrl(user, password, relativeFilePath);
+            setPreviewType('pdf');
+            setPreviewContent(pdfUrl);
+            return;
+        }
+
+        if (fileNameLower.match(/\.(txt|md|json|xml|js|ts|py|html|css|log|java|c|cpp)$/)) {
             setPreviewType('text'); setViewLoading(true);
             try {
                 const res = await userApi.viewFileContent(user, password, relativeFilePath);
                 const content = typeof res.data === 'string' ? res.data : JSON.stringify(res.data, null, 2);
                 setPreviewContent(content);
-            } catch { alert("Không thể đọc nội dung file này."); setPreviewType(null); } finally { setViewLoading(false); }
+            } catch { 
+                Swal.fire('Lỗi', 'Không thể đọc nội dung file này.', 'error'); 
+                setPreviewType(null); 
+            } finally { setViewLoading(false); }
             return;
         }
+        
         const downloadUrl = userApi.getDownloadUrl(user, password, relativeFilePath);
         window.open(downloadUrl, '_blank');
     };
@@ -164,7 +212,6 @@ export default function Dashboard() {
 
                     {/* QUOTA CARDS */}
                     <h2 className="text-lg font-semibold text-gray-700 mb-4 flex items-center gap-2">
-                        {/* <span className="text-blue-500">📊Dung lượng lưu trữ</span> */}
                         <h2 className="text-xl font-bold text-gray-800">Dung lượng lưu trữ</h2>
                     </h2>
                     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
@@ -229,6 +276,7 @@ export default function Dashboard() {
                                         size={formatBytes(f.size || 0)}
                                         type={f.type === 'directory' ? 'directory' : 'file'}
                                         modified={f.modified}
+                                        onDelete={(e) => handleDelete(e, f)}
                                     />
                                 </div>
                             ))}
@@ -243,6 +291,7 @@ export default function Dashboard() {
                                         {previewType === 'image'}
                                         {previewType === 'video'}
                                         {previewType === 'text'}
+                                        {previewType === 'pdf'}
                                         Xem trước
                                     </span>
                                     <button onClick={closePreview} className="text-gray-400 hover:text-gray-700 hover:bg-gray-200 p-2 rounded-full transition-all">
@@ -261,6 +310,8 @@ export default function Dashboard() {
                                         <img src={previewContent as string} alt="Preview" className="max-w-full max-h-[80vh] object-contain shadow-lg" />
                                     ) : previewType === 'video' ? (
                                         <video src={previewContent as string} controls autoPlay className="max-w-full max-h-[80vh] shadow-lg rounded-lg bg-black" />
+                                    ) : previewType === 'pdf' ? (
+                                        <iframe src={previewContent as string} className="w-full h-full min-h-[80vh]" title="PDF Preview"></iframe>
                                     ) : (
                                         <div className="w-full h-full p-6 bg-white overflow-auto">
                                             <pre className="text-sm font-mono text-gray-800 whitespace-pre-wrap leading-relaxed">{previewContent}</pre>

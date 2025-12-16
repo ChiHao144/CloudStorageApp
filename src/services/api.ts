@@ -73,16 +73,13 @@ export const userApi = {
         return api.get(`/files?username=${username}&password=${password}&path=${encodedPath}`);
     },
 
-     // 3. Xem nội dung file Text (GET /file-content)
     viewFileContent: (username: string, password: string, filepath: string) => {
-        // Cần encode cả username và password để tránh lỗi ký tự đặc biệt
         const u = encodeURIComponent(username);
         const p = encodeURIComponent(password);
         const f = encodeURIComponent(filepath);
         return api.get(`/file-content?username=${u}&password=${p}&path=${f}`);
     },
 
-    // 4. Lấy URL tải file/xem ảnh (GET /file-stream)
     getDownloadUrl: (username: string, password: string, filepath: string) => {
         const u = encodeURIComponent(username);
         const p = encodeURIComponent(password);
@@ -91,12 +88,17 @@ export const userApi = {
     },
 
     getFilesFolder: (username: string, password: string, filepath: string) => {
-        // Cần encode cả username và password để tránh lỗi ký tự đặc biệt
         const u = encodeURIComponent(username);
         const p = encodeURIComponent(password);
         const f = encodeURIComponent(filepath);
         return api.get(`/list-dir?username=${u}&password=${p}&path=${f}`);
     },
+    deleteFile: (username: string, password: string, filepath: string) => {
+        const u = encodeURIComponent(username);
+        const p = encodeURIComponent(password);
+        const f = encodeURIComponent(filepath);
+        return api.delete(`/delete?username=${u}&password=${p}&path=${f}`);
+    }
 };
 
 export default api;

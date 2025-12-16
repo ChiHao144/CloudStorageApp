@@ -3,6 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { useRouter } from 'next/router';
 import { userApi } from '../services/api';
 import { FiUploadCloud } from 'react-icons/fi';
+import Swal from 'sweetalert2';
 
 export default function Upload() {
     const { user, isAuthenticated } = useAuth();
@@ -55,14 +56,19 @@ export default function Upload() {
             return;
         }
         if (!selectedFile || !user) {
-            alert("Vui lòng chọn file.");
+            Swal.fire("Lỗi", "Vui lòng chọn file", "warning");
             return;
         }
 
         setLoading(true);
         try {
             await userApi.uploadFile(selectedFile, user, password);
-            alert(`Tải lên thành công: ${selectedFile.name}!`);
+            Swal.fire({
+                title: 'Thành công!',
+                text: `Đã tải lên file: ${selectedFile.name}`,
+                icon: 'success',
+                confirmButtonText: 'Tuyệt vời'
+            });
             setSelectedFile(null);
             setPassword('');
         } catch (err: unknown) {
@@ -74,8 +80,10 @@ export default function Upload() {
                     errMsg = response.data.detail[0].msg;
                 }
             }
-            alert(`Lỗi khi tải lên: ${errMsg}`);
+            Swal.fire('Lỗi tải lên', errMsg, 'error');
             console.error('Upload Error:', err);
+        } finally {
+            setLoading(false);
         }
     };
 
