@@ -134,6 +134,19 @@ export default function Dashboard() {
         }
     };
 
+    const handleDownload = (e: React.MouseEvent, item: FileItem) => {
+        e.stopPropagation();
+        
+        const password = localStorage.getItem('password');
+        if (!user || !password) return;
+
+        const itemName = item.name ? decodeURIComponent(item.name) : getFileNameFromPath(item.path);
+        const relativeFilePath = currentPath ? `${currentPath}/${itemName}` : itemName;
+        const downloadUrl = userApi.getDownloadLink(user, password, relativeFilePath);
+        
+        window.open(downloadUrl, '_blank');
+    };
+
     const handleItemClick = async (item: FileItem) => {
         const itemName = item.name ? decodeURIComponent(item.name) : getFileNameFromPath(item.path);
         if (item.type === 'directory') {
@@ -277,6 +290,7 @@ export default function Dashboard() {
                                         type={f.type === 'directory' ? 'directory' : 'file'}
                                         modified={f.modified}
                                         onDelete={(e) => handleDelete(e, f)}
+                                        onDownload={(e) => handleDownload(e, f)}
                                     />
                                 </div>
                             ))}

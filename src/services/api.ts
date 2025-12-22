@@ -98,7 +98,34 @@ export const userApi = {
         const p = encodeURIComponent(password);
         const f = encodeURIComponent(filepath);
         return api.delete(`/delete?username=${u}&password=${p}&path=${f}`);
-    }
+    },
+
+    getDownloadLink: (username: string, password: string, filepath: string) => {
+        const u = encodeURIComponent(username);
+        const p = encodeURIComponent(password);
+        const f = encodeURIComponent(filepath);
+        return `${API_BASE_URL}/download?username=${u}&password=${p}&path=${f}`;
+    },
+
+    // --- THÊM MỚI CÁC HÀM DƯỚI ĐÂY ---
+
+    // 1. Tạo link thanh toán MoMo
+    createMomoPayment: (username: string, plan: string) => {
+        const formData = new FormData();
+        formData.append('username', username);
+        formData.append('plan', plan);
+        
+        return api.post('/payment/momo/create', formData);
+    },
+
+    // 2. Nâng cấp tài khoản (Gọi ở trang Callback)
+    upgradeAccount: (username: string, plan: string) => {
+        const formData = new FormData();
+        formData.append('username', username);
+        formData.append('plan', plan);
+
+        return api.post('/upgrade-account', formData);
+    },
 };
 
 export default api;
