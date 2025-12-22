@@ -119,6 +119,9 @@ export default function Navbar() {
                                 <Link href="/payment" onClick={closeMenu} className="block px-3 py-2 rounded-md text-base font-medium text-gray-700 hover:text-blue-600 hover:bg-blue-50">
                                     Payment
                                 </Link>
+                                <Link href="/profile" className="text-gray-600 hover:text-blue-600 font-medium transition-colors">
+                                    Profile
+                                </Link>
                                 <button
                                     onClick={handleLogout}
                                     className="w-full text-left mt-2 block px-3 py-2 rounded-md text-base font-medium text-red-600 hover:bg-red-50"

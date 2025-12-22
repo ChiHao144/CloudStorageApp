@@ -5,7 +5,7 @@ const nextConfig = {
     return [
       {
         source: '/api/:path*',
-        destination: 'http://54.166.139.53:8000/:path*', // Proxy to Backend
+        destination: 'http://backend-alb-930091010.us-east-1.elb.amazonaws.com/:path*', // Proxy to Backend
       },
     ];
   },
