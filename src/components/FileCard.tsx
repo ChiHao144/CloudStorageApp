@@ -8,6 +8,7 @@ interface FileCardProps {
     modified?: string;
     onDelete?: (e: React.MouseEvent) => void;
     onDownload?: (e: React.MouseEvent) => void;
+    onShare?: (e: React.MouseEvent) => void;
 }
 
 const getIconByType = (type: string, name: string) => {
@@ -26,13 +27,30 @@ const getIconByType = (type: string, name: string) => {
     return <FaFileAlt className="text-blue-400 w-10 h-10" />;
 }
 
-export default function FileCard({ name, size, type, modified, onDelete, onDownload }: FileCardProps) {
+export default function FileCard({ name, size, type, modified, onDelete, onDownload, onShare }: FileCardProps) {
     const displaySize = type === 'file' ? size : 'Folder';
 
     return (
         <div className="group relative bg-white p-4 rounded-xl border border-gray-200 shadow-sm hover:shadow-md hover:border-blue-300 transition-all duration-200 cursor-pointer flex flex-col gap-3 h-full">
             {(onDelete || (type === 'file' && onDownload)) && (
                 <div className="absolute bottom-1.5 right-1.5 flex gap-2 opacity-0 group-hover:opacity-100 transition-all z-10">
+                    {onShare && (
+                        <button
+                            onClick={onShare}
+                            className="p-1.5 rounded-full bg-white text-gray-400 hover:text-green-500 hover:bg-green-50 shadow-sm border border-gray-100"
+                            title="Chia sẻ"
+                        >
+                            <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                viewBox="0 0 448 512"
+                                className="h-4 w-4"
+                                fill="currentColor"
+                            >
+                                <path d="M352 320c-22.6 0-43.4 9.4-58.3 24.6L154.6 256.1c1.1-5.3 1.7-10.7 1.7-16.1s-.6-10.8-1.7-16.1l139.1-88.5C308.6 150.6 329.4 160 352 160c53 0 96-43 96-96S405  -32 352-32s-96 43-96 96c0 5.4.6 10.8 1.7 16.1L118.6 168.6C103.7 153.4 82.9 144 60.3 144 7.3 144-35.7 187-35.7 240s43 96 96 96c22.6 0 43.4-9.4 58.3-24.6l139.1 88.5c-1.1 5.1-1.7 10.5-1.7 15.9 0 53 43 96 96 96s96-43 96-96-43-96-96-96z" />
+                            </svg>
+                        </button>
+                    )}
+
                     {onDownload && (
                         <button
                             onClick={onDownload}

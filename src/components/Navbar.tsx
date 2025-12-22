@@ -57,6 +57,9 @@ export default function Navbar() {
                                 <Link href="/payment" className="text-gray-600 hover:text-blue-600 font-medium transition-colors">
                                     Payment
                                 </Link>
+                                <Link href="/profile" className="text-gray-600 hover:text-blue-600 font-medium transition-colors">
+                                    Profile
+                                </Link>
 
                                 <div className="flex items-center gap-4 ml-4 pl-4 border-l border-gray-200">
                                     <span className="text-sm text-gray-500">Xin chào, <span className="font-semibold text-gray-800">{user}</span></span>

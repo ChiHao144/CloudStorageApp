@@ -3,6 +3,7 @@ import { authApi } from '../services/api';
 import { useRouter } from 'next/router';
 import Link from 'next/link';
 import Swal from 'sweetalert2';
+import { FaEye, FaEyeSlash } from 'react-icons/fa';
 
 const validatePassword = (password: string): string | null => {
     if (password.length < 10) return "Mật khẩu phải có ít nhất 10 ký tự.";
@@ -15,6 +16,7 @@ export default function Register() {
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
     const [passwordError, setPasswordError] = useState<string | null>(null); 
+    const [showPassword, setShowPassword] = useState(false);
     const router = useRouter();
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -93,14 +95,24 @@ export default function Register() {
                         
                         <div>
                             <label className="mb-1 block text-sm font-medium text-gray-700">Mật khẩu</label>
-                            <input 
-                                type="password" 
-                                value={password} 
-                                onChange={(e) => setPassword(e.target.value)} 
-                                className={`block w-full rounded-lg border px-4 py-3 text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 sm:text-sm transition-all ${passwordError ? 'border-red-500 focus:ring-red-500/50' : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500/50'}`}
-                                placeholder="••••••••"
-                                required 
-                            />
+                            <div className="relative">
+                                <input 
+                                    type={showPassword ? "text" : "password"} // Chuyển đổi type input
+                                    value={password} 
+                                    onChange={(e) => setPassword(e.target.value)} 
+                                    className={`block w-full rounded-lg border px-4 py-3 text-gray-900 placeholder-gray-500 focus:outline-none focus:ring-2 sm:text-sm transition-all pr-10 ${passwordError ? 'border-red-500 focus:ring-red-500/50' : 'border-gray-300 focus:border-blue-500 focus:ring-blue-500/50'}`}
+                                    placeholder="••••••••"
+                                    required 
+                                />
+                                {/* Nút bật/tắt hiển thị mật khẩu */}
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPassword(!showPassword)}
+                                    className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-blue-600 transition-colors"
+                                >
+                                    {showPassword ? <FaEyeSlash size={18} /> : <FaEye size={18} />}
+                                </button>
+                            </div>
                             {passwordError && (
                                 <p className="mt-1 text-xs text-red-600">{passwordError}</p>
                             )}

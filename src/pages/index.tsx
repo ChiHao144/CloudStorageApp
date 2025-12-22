@@ -4,7 +4,8 @@ import { useRouter } from 'next/router';
 import { useCallback, useEffect, useState } from 'react';
 import { userApi } from '../services/api';
 import { PiHandWavingBold } from "react-icons/pi";
-import Swal from 'sweetalert2'; 
+import Swal from 'sweetalert2';
+import { FaShareAlt } from 'react-icons/fa';
 
 const formatBytes = (bytes: number | string, decimals = 2) => {
     const numBytes = typeof bytes === 'string' ? parseInt(bytes) : bytes;
@@ -15,6 +16,14 @@ const formatBytes = (bytes: number | string, decimals = 2) => {
     const i = Math.floor(Math.log(numBytes) / Math.log(k));
     return parseFloat((numBytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
 }
+
+const getPlanName = (totalBytes: number) => {
+    const GB = 1024 * 1024 * 1024;
+    if (totalBytes <= 1 * GB) return { name: 'Gói Free', color: 'bg-gray-100 text-gray-500' };
+    if (totalBytes <= 5 * GB) return { name: 'Gói Basic', color: 'bg-blue-100 text-blue-600' };
+    if (totalBytes <= 10 * GB) return { name: 'Gói Pro', color: 'bg-indigo-100 text-indigo-600' };
+    return { name: 'Gói VIP', color: 'bg-amber-100 text-amber-600' };
+};
 
 const getFileNameFromPath = (path: string): string => {
     try {
@@ -32,6 +41,22 @@ interface FileItem {
     name?: string; size: number | string; path: string; type: string; modified: string;
 }
 
+interface ShareItem {
+    id: number;
+    share_type: number;
+    url?: string;
+    token?: string;
+    share_with_displayname?: string;
+    share_with?: string;
+}
+
+interface ExtendedSharingItem {
+    name?: string;
+    path: string;
+    displayName: string;
+    fullPath: string;
+}
+
 export default function Dashboard() {
     const { user, isAuthenticated } = useAuth();
     const router = useRouter();
@@ -44,15 +69,22 @@ export default function Dashboard() {
     const [previewType, setPreviewType] = useState<'image' | 'video' | 'text' | 'pdf' | null>(null);
     const [viewLoading, setViewLoading] = useState(false);
 
+    const [sharingItem, setSharingItem] = useState<unknown>(null);
+    const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+    const [currentShares, setCurrentShares] = useState<unknown[]>([]);
+
+    const [targetUser, setTargetUser] = useState('');
+    const [canEditShare, setCanEditShare] = useState(false);
+
     const fetchData = useCallback(async () => {
         if (!user) return;
-        const password = localStorage.getItem('password'); 
-        if (!password) { 
+        const password = localStorage.getItem('password');
+        if (!password) {
             Swal.fire('Lỗi', 'Vui lòng đăng xuất và đăng nhập lại.', 'error');
-            setLoading(false); 
-            return; 
+            setLoading(false);
+            return;
         }
-        
+
         try {
             let filesApiCall;
             if (currentPath) filesApiCall = userApi.getFilesFolder(user, password, currentPath);
@@ -84,14 +116,14 @@ export default function Dashboard() {
                             if (p.endsWith('/')) p = p.slice(0, -1);
                             if (p === currentPath || p.endsWith(`/${currentPath}`)) return false;
                         }
-                        return true; 
+                        return true;
                     });
                     setFiles(meaningfulItems);
-                } else setFiles([]); 
+                } else setFiles([]);
             }
-        } catch (err) { 
-            console.error(err); 
-            setError("Có lỗi xảy ra khi tải dữ liệu."); 
+        } catch (err) {
+            console.error(err);
+            setError("Có lỗi xảy ra khi tải dữ liệu.");
         } finally { setLoading(false); }
     }, [user, currentPath]);
 
@@ -100,9 +132,98 @@ export default function Dashboard() {
         fetchData();
     }, [isAuthenticated, user, router, currentPath, fetchData]);
 
+    const getErrorMessage = (err: unknown): string => {
+        if (err && typeof err === 'object' && 'response' in err) {
+            const response = (err as { response: { data?: { error?: string } } }).response;
+            return response.data?.error || 'Có lỗi xảy ra';
+        }
+        return err instanceof Error ? err.message : 'Có lỗi xảy ra';
+    };
+
+    const handleShareToUser = async () => {
+        if (!targetUser.trim()) {
+            Swal.fire('Thông báo', 'Vui lòng nhập tên người dùng cần chia sẻ', 'info');
+            return;
+        }
+
+        const password = localStorage.getItem('password');
+        const item = sharingItem as ExtendedSharingItem; // Ép kiểu từ unknown
+        if (!user || !password || !item) return;
+
+        try {
+            await userApi.shareToUser(user, password, item.fullPath, targetUser, canEditShare);
+            Swal.fire('Thành công!', `Đã chia sẻ với người dùng ${targetUser}`, 'success');
+            setTargetUser('');
+            const updated = await userApi.listShares(user, password, item.fullPath);
+            setCurrentShares(Array.isArray(updated.data) ? updated.data : []);
+        } catch (err: unknown) {
+            Swal.fire('Lỗi', getErrorMessage(err), 'error');
+        }
+    };
+
+    const handleShareClick = async (e: React.MouseEvent, item: unknown) => {
+        e.stopPropagation();
+        const password = localStorage.getItem('password');
+        if (!user || !password) return;
+
+        const fileItem = item as { name?: string; path: string };
+        const itemName = fileItem.name ? decodeURIComponent(fileItem.name) : getFileNameFromPath(fileItem.path);
+        const fullPath = currentPath ? `${currentPath}/${itemName}` : itemName;
+
+        setSharingItem({ ...fileItem, displayName: itemName, fullPath } as unknown);
+        setIsShareModalOpen(true);
+
+        try {
+            const res = await userApi.listShares(user, password, fullPath);
+            setCurrentShares(Array.isArray(res.data) ? res.data : []);
+        } catch {
+            setCurrentShares([]);
+        }
+    };
+
+    const handleCreatePublicShare = async () => {
+        const password = localStorage.getItem('password');
+        const item = sharingItem as ExtendedSharingItem; // Ép kiểu từ unknown
+        if (!user || !password || !item) return;
+
+        try {
+            const res = await userApi.sharePublic(user, password, item.fullPath);
+            const data = res.data as { url: string };
+            Swal.fire({
+                title: 'Thành công!',
+                text: `Link chia sẻ: ${data.url}`,
+                icon: 'success',
+                confirmButtonText: 'Sao chép link'
+            }).then((result) => {
+                if (result.isConfirmed) navigator.clipboard.writeText(data.url);
+            });
+
+            const updated = await userApi.listShares(user, password, item.fullPath);
+            setCurrentShares(Array.isArray(updated.data) ? updated.data : []);
+        } catch (err: unknown) {
+            Swal.fire('Lỗi', getErrorMessage(err), 'error');
+        }
+    };
+
+    const handleDeleteShare = async (shareId: number) => {
+        const password = localStorage.getItem('password');
+        if (!user || !password) return;
+
+        try {
+            await userApi.deleteShare(user, password, shareId);
+
+            // Ép kiểu 's' thành bất kỳ đối tượng nào có thuộc tính id: number
+            setCurrentShares(currentShares.filter(s => (s as { id: number }).id !== shareId));
+
+            Swal.fire('Đã xóa', 'Đã hủy quyền chia sẻ thành công.', 'success');
+        } catch {
+            Swal.fire('Lỗi', 'Không thể xóa chia sẻ.', 'error');
+        }
+    };
+
     const handleDelete = async (e: React.MouseEvent, item: FileItem) => {
         e.stopPropagation();
-        
+
         const itemName = item.name ? decodeURIComponent(item.name) : getFileNameFromPath(item.path);
         const typeText = item.type === 'directory' ? 'thư mục' : 'file';
 
@@ -136,14 +257,14 @@ export default function Dashboard() {
 
     const handleDownload = (e: React.MouseEvent, item: FileItem) => {
         e.stopPropagation();
-        
+
         const password = localStorage.getItem('password');
         if (!user || !password) return;
 
         const itemName = item.name ? decodeURIComponent(item.name) : getFileNameFromPath(item.path);
         const relativeFilePath = currentPath ? `${currentPath}/${itemName}` : itemName;
         const downloadUrl = userApi.getDownloadLink(user, password, relativeFilePath);
-        
+
         window.open(downloadUrl, '_blank');
     };
 
@@ -171,7 +292,7 @@ export default function Dashboard() {
             setPreviewType('video'); setPreviewContent(videoUrl); return;
         }
 
-       
+
         if (fileNameLower.match(/\.(pdf)$/)) {
             const pdfUrl = userApi.getDownloadUrl(user, password, relativeFilePath);
             setPreviewType('pdf');
@@ -185,13 +306,13 @@ export default function Dashboard() {
                 const res = await userApi.viewFileContent(user, password, relativeFilePath);
                 const content = typeof res.data === 'string' ? res.data : JSON.stringify(res.data, null, 2);
                 setPreviewContent(content);
-            } catch { 
-                Swal.fire('Lỗi', 'Không thể đọc nội dung file này.', 'error'); 
-                setPreviewType(null); 
+            } catch {
+                Swal.fire('Lỗi', 'Không thể đọc nội dung file này.', 'error');
+                setPreviewType(null);
             } finally { setViewLoading(false); }
             return;
         }
-        
+
         const downloadUrl = userApi.getDownloadUrl(user, password, relativeFilePath);
         window.open(downloadUrl, '_blank');
     };
@@ -206,6 +327,7 @@ export default function Dashboard() {
     const usedSpace = quota?.used ? parseInt(quota.used) : 0;
     const totalSpace = quota?.total ? parseInt(quota.total) : 0;
     const freeSpace = quota?.free ? parseInt(quota.free) : 0;
+    const planInfo = getPlanName(totalSpace);
 
     return (
         <main className="flex-1 w-full bg-gray-50 min-h-[calc(100vh-64px)]">
@@ -238,7 +360,9 @@ export default function Dashboard() {
                         <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
                             <div className="text-gray-500 text-sm font-medium mb-1">Tổng dung lượng</div>
                             <div className="text-3xl font-bold text-gray-800">{formatBytes(totalSpace)}</div>
-                            <div className="mt-4 text-xs text-gray-400">Gói Free</div>
+                            <div className={`mt-4 text-xs inline-block px-2 py-1 rounded ${planInfo.color}`}>
+                                {planInfo.name}
+                            </div>
                         </div>
                         <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow">
                             <div className="text-gray-500 text-sm font-medium mb-1">Còn trống</div>
@@ -291,6 +415,7 @@ export default function Dashboard() {
                                         modified={f.modified}
                                         onDelete={(e) => handleDelete(e, f)}
                                         onDownload={(e) => handleDownload(e, f)}
+                                        onShare={(e) => handleShareClick(e, f)}
                                     />
                                 </div>
                             ))}
@@ -329,6 +454,92 @@ export default function Dashboard() {
                                     ) : (
                                         <div className="w-full h-full p-6 bg-white overflow-auto">
                                             <pre className="text-sm font-mono text-gray-800 whitespace-pre-wrap leading-relaxed">{previewContent}</pre>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                    {/* MODAL SHARING */}
+                    {isShareModalOpen && (
+
+                        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-[110] p-4">
+                            <div className="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl">
+                                <div className="flex justify-between items-center mb-6">
+                                    <h3 className="text-xl font-bold text-gray-800 truncate pr-4">
+                                        Chia sẻ: {(sharingItem as { displayName: string })?.displayName}
+                                    </h3>
+                                    <button onClick={() => setIsShareModalOpen(false)} className="text-gray-400 hover:text-gray-600 text-2xl">×</button>
+                                </div>
+                                <div className="mb-6 space-y-4">
+                                    <div>
+                                        <label className="block text-sm font-bold text-gray-700 mb-1">Chia sẻ với người dùng</label>
+                                        <div className="flex gap-2">
+                                            <input
+                                                type="text"
+                                                placeholder="Nhập username..."
+                                                className="flex-1 border rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+                                                value={targetUser}
+                                                onChange={(e) => setTargetUser(e.target.value)}
+                                            />
+                                            <button
+                                                onClick={handleShareToUser}
+                                                className="bg-indigo-600 text-white px-4 py-2 rounded-xl text-sm font-bold hover:bg-indigo-700 transition-colors"
+                                            >
+                                                Chia sẻ
+                                            </button>
+                                        </div>
+                                        <div className="mt-2 flex items-center gap-2">
+                                            <input
+                                                type="checkbox"
+                                                id="canEdit"
+                                                checked={canEditShare}
+                                                onChange={(e) => setCanEditShare(e.target.checked)}
+                                            />
+                                            <label htmlFor="canEdit" className="text-xs text-gray-600">Cho phép chỉnh sửa</label>
+                                        </div>
+                                    </div>
+
+                                    <div className="relative">
+                                        <div className="absolute inset-0 flex items-center"><span className="w-full border-t"></span></div>
+                                        <div className="relative flex justify-center text-xs uppercase"><span className="bg-white px-2 text-gray-400">Hoặc</span></div>
+                                    </div>
+
+                                    <button
+                                        onClick={handleCreatePublicShare}
+                                        className="w-full border-2 border-blue-600 text-blue-600 py-2.5 rounded-xl font-bold hover:bg-blue-50 transition-all flex items-center justify-center gap-2"
+                                    >
+                                        <FaShareAlt /> Tạo Link Công Khai
+                                    </button>
+                                </div>
+
+                                <div className="border-t pt-4">
+                                    <h4 className="text-sm font-bold text-gray-500 mb-3 uppercase tracking-wider">Lượt chia sẻ hiện tại</h4>
+                                    {currentShares.length === 0 ? (
+                                        <p className="text-gray-400 text-sm italic">Chưa có chia sẻ nào cho tệp này.</p>
+                                    ) : (
+                                        <div className="space-y-3 max-h-60 overflow-auto pr-2">
+                                            {currentShares.map((s: unknown) => {
+                                                const share = s as ShareItem; // Ép kiểu để dùng thuộc tính
+                                                return (
+                                                    <div key={share.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-100">
+                                                        <div className="truncate flex-1 mr-3">
+                                                            <div className="text-sm font-semibold text-gray-700 truncate">
+                                                                {share.share_type === 3 ? (
+                                                                    <a href={share.url} target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">
+                                                                        Link công khai: {share.token}
+                                                                    </a>
+                                                                ) : (
+                                                                    <span className="flex items-center gap-2">
+                                                                        {share.share_with_displayname || share.share_with}
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                        <button onClick={() => handleDeleteShare(share.id)} className="text-red-500 p-2">✕</button>
+                                                    </div>
+                                                );
+                                            })}
                                         </div>
                                     )}
                                 </div>

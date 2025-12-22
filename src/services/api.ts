@@ -45,7 +45,7 @@ export const userApi = {
         const formData = new FormData();
         formData.append('file', file);
         formData.append('username', username);
-        formData.append('password', password); 
+        formData.append('password', password);
 
         return api.post('/upload', formData, {
         });
@@ -54,21 +54,21 @@ export const userApi = {
     makePayment: (username: string, amount: number) => {
         const formData = new URLSearchParams();
         formData.append('username', username);
-        formData.append('amount', amount.toString()); 
-        
+        formData.append('amount', amount.toString());
+
         return api.post('/payment', formData, {
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' }
         });
     },
-    
+
     getQuota: (username: string, password: string) => {
-        
+
         return api.get(`/quota?username=${username}&password=${password}`);
     },
 
-    
+
     getFiles: (username: string, password: string, path: string = "") => {
-        
+
         const encodedPath = encodeURIComponent(path);
         return api.get(`/files?username=${username}&password=${password}&path=${encodedPath}`);
     },
@@ -114,7 +114,7 @@ export const userApi = {
         const formData = new FormData();
         formData.append('username', username);
         formData.append('plan', plan);
-        
+
         return api.post('/payment/momo/create', formData);
     },
 
@@ -125,6 +125,56 @@ export const userApi = {
         formData.append('plan', plan);
 
         return api.post('/upgrade-account', formData);
+    },
+
+    // --- USER PROFILE (MỚI từ user.py) ---
+    getProfile: (username: string, password: string) => {
+        const formData = new URLSearchParams();
+        formData.append('username', username);
+        formData.append('password', password);
+        return api.post('/auth/me', formData);
+    },
+    updateProfile: (username: string, password: string, data: { displayname?: string, email?: string, new_password?: string }) => {
+        const formData = new URLSearchParams();
+        formData.append('username', username);
+        formData.append('password', password);
+        if (data.displayname) formData.append('displayname', data.displayname);
+        if (data.email) formData.append('email', data.email);
+        if (data.new_password) formData.append('new_password', data.new_password);
+        return api.post('/auth/me/update', formData);
+    },
+
+    // --- SHARING (MỚI từ share.py) ---
+    sharePublic: (username: string, password: string, filepath: string, canEdit: boolean = false) => {
+        const formData = new FormData();
+        formData.append('username', username);
+        formData.append('password', password);
+        formData.append('filepath', filepath);
+        formData.append('can_edit', String(canEdit));
+        return api.post('/share/share-file', formData);
+    },
+    listShares: (username: string, password: string, filepath: string) => {
+        const formData = new FormData();
+        formData.append('username', username);
+        formData.append('password', password);
+        formData.append('filepath', filepath);
+        return api.post('/share/list-shares', formData);
+    },
+    deleteShare: (username: string, password: string, shareId: number) => {
+        const formData = new FormData();
+        formData.append('username', username);
+        formData.append('password', password);
+        formData.append('share_id', String(shareId));
+        return api.post('/share/delete-share', formData);
+    },
+    shareToUser: (username: string, password: string, filepath: string, targetUser: string, canEdit: boolean = false) => {
+        const formData = new FormData();
+        formData.append('username', username);
+        formData.append('password', password);
+        formData.append('filepath', filepath);
+        formData.append('target_user', targetUser); // Khớp với target_user: str = Form(...) ở backend
+        formData.append('can_edit', String(canEdit));
+        return api.post('/share/share-to-user', formData);
     },
 };
 
