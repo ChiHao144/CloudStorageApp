@@ -82,6 +82,19 @@ export default function Profile() {
         }
     };
 
+    function formatBytes(bytes: number, decimals = 2) {
+        if (!bytes || bytes === 0) return '0 B';
+
+        const k = 1024;
+        const dm = decimals < 0 ? 0 : decimals;
+        const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+
+        return `${parseFloat((bytes / Math.pow(k, i)).toFixed(dm))} ${sizes[i]}`;
+    }
+
+
     useEffect(() => {
         if (isAuthenticated && user) {
             fetchProfile();
@@ -165,7 +178,10 @@ export default function Profile() {
                                     style={{ width: `${profileData?.quota?.relative || 0}%` }}
                                 ></div>
                             </div>
-                            <p className="text-xs text-gray-500 mt-2">Dùng {profileData?.quota?.used} trên tổng số {profileData?.quota?.total}</p>
+                            <p className="text-xs text-gray-500 mt-2">
+                                Đã dùng {formatBytes(Number(profileData?.quota?.used) || 0)} trên tổng{' '}
+                                {formatBytes(Number(profileData?.quota?.total) || 0)}
+                            </p>
                         </div>
                     </div>
                 </div>
