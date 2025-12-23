@@ -127,6 +127,22 @@ export const userApi = {
         return api.post('/upgrade-account', formData);
     },
 
+    // Thanh toán với ZaloPay
+    createZaloPayPayment: (username: string, plan: string) => {
+        const formData = new FormData();
+        formData.append('username', username);
+        formData.append('plan', plan);
+        return api.post('/payment/zalopay/create', formData);
+    },
+
+    // Xác nhận thanh toán ZaloPay (Gọi ở trang Callback)
+    confirmZaloPayPayment: (appTransId: string, status: string) => {
+        const formData = new FormData();
+        formData.append('appTransId', appTransId);
+        formData.append('status', status);
+        return api.post('/payment/zalopay/callback', formData);
+    },
+
     // --- USER PROFILE (MỚI từ user.py) ---
     getProfile: (username: string, password: string) => {
         const formData = new URLSearchParams();
