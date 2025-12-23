@@ -91,30 +91,25 @@ export default function Dashboard() {
         }
 
         try {
-            let filesApiCall;
-            if (currentPath) filesApiCall = userApi.getFilesFolder(user, password, currentPath);
-            else filesApiCall = userApi.getFiles(user, password);
+            const filesApiCall = currentPath
+                ? userApi.getFilesFolder(user, password, currentPath)
+                : userApi.getFiles(user, password);
 
             const [quotaRes, filesRes] = await Promise.allSettled([
                 userApi.getQuota(user, password),
-                filesApiCall
+                filesApiCall,
             ]);
 
-            console.log(filesRes);
-
-            // Lấy các thư mục để di chuyển file. Cắt từ danh sách file hiện tại
-            const folderList = filesRes.value.data.files.filter(item => item.type === 'directory').map(item => {
-                const name = item.name ? decodeURIComponent(item.name) : getFileNameFromPath(item.path);
-                return currentPath ? `${currentPath}/${name}` : name;
-            });
-
-            console.log('Folders for move:', folderList);
-            setFolders(folderList);
-
+            // --- XỬ LÝ QUOTA ---
             const isQuotaResponseValid = (data: unknown): data is { quota: QuotaData } => {
-                if (typeof data !== 'object' || data === null) return false;
-                const d = data as { quota?: unknown };
-                return typeof d.quota === 'object' && d.quota !== null && 'used' in (d.quota as object);
+                return (
+                    typeof data === 'object' &&
+                    data !== null &&
+                    'quota' in data &&
+                    typeof (data as any).quota === 'object' &&
+                    (data as any).quota !== null &&
+                    'used' in (data as any).quota
+                );
             };
 
             if (quotaRes.status === 'fulfilled' && isQuotaResponseValid(quotaRes.value.data)) {
@@ -122,8 +117,36 @@ export default function Dashboard() {
             }
             if (filesRes.status === 'fulfilled') {
                 const data = filesRes.value.data as { files?: unknown; items?: unknown };
-                const rawList = (Array.isArray(data.items) ? data.items : (Array.isArray(data.files) ? data.files : [])) as FileItem[];
-                const meaningfulItems = rawList.filter(f => {
+
+                // Lấy danh sách raw file, kiểm tra từng item an toàn
+                const rawList: FileItem[] = (
+                    Array.isArray(data.items)
+                        ? data.items
+                        : Array.isArray(data.files)
+                            ? data.files
+                            : []
+                ).filter(
+                    (item): item is FileItem =>
+                        typeof item === 'object' &&
+                        item !== null &&
+                        'path' in item &&
+                        'type' in item &&
+                        'size' in item
+                );
+
+                // Lấy danh sách thư mục để move
+                const folderList = rawList
+                    .filter((item): item is FileItem => item.type === 'directory')
+                    .map((item) => {
+                        const name = item.name
+                            ? decodeURIComponent(item.name)
+                            : getFileNameFromPath(item.path);
+                        return currentPath ? `${currentPath}/${name}` : name;
+                    });
+                setFolders(folderList);
+
+                // Lọc meaningful items hiển thị
+                const meaningfulItems = rawList.filter((f) => {
                     const name = f.name ? decodeURIComponent(f.name) : getFileNameFromPath(f.path);
                     if (!name || name === user) return false;
                     if (currentPath) {
@@ -137,8 +160,10 @@ export default function Dashboard() {
             }
         } catch (err) {
             console.error(err);
-            setError("Có lỗi xảy ra khi tải dữ liệu.");
-        } finally { setLoading(false); }
+            setError('Có lỗi xảy ra khi tải dữ liệu.');
+        } finally {
+            setLoading(false);
+        }
     }, [user, currentPath]);
 
     useEffect(() => {
