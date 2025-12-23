@@ -192,6 +192,14 @@ export const userApi = {
         formData.append('can_edit', String(canEdit));
         return api.post('/share/share-to-user', formData);
     },
+    moveFileToFolder: (username: string, password: string, sourcePath: string, destPath: string) => {
+        const formData = new FormData();
+        formData.append('username', username);
+        formData.append('password', password);
+        formData.append('source_path', sourcePath);
+        formData.append('destination_path', destPath);
+        return api.post('/move', formData);
+    }
 };
 
 export default api;
