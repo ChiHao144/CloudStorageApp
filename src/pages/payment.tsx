@@ -2,22 +2,10 @@ import { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { userApi } from '@/services/api';
 import Swal from 'sweetalert2';
-import { FaHdd, FaRocket, FaCrown, FaCheck, FaCloudUploadAlt, FaSpinner, FaWallet, FaTimes } from 'react-icons/fa';
+import { FaHdd, FaRocket, FaCrown, FaCheck, FaCloudUploadAlt, FaSpinner } from 'react-icons/fa';
 
-// 1. Định nghĩa Interface cho cấu trúc của một Gói (Plan)
-interface Plan {
-    id: string;
-    name: string;
-    price: number;
-    quota: string;
-    icon: JSX.Element;
-    features: string[];
-    recommend: boolean;
-    color: string;
-}
-
-// Cấu hình danh sách gói với kiểu dữ liệu Plan[]
-const PLANS: Plan[] = [
+// Cấu hình danh sách gói với chi tiết hiển thị
+const PLANS = [
     {
         id: 'basic',
         name: 'Gói Basic',
@@ -35,7 +23,7 @@ const PLANS: Plan[] = [
         quota: '10GB',
         icon: <FaRocket className="text-4xl text-purple-500" />,
         features: ['Tốc độ tải nhanh', 'Ưu tiên hỗ trợ', 'Sao lưu tự động'],
-        recommend: true,
+        recommend: true, // Gói được khuyên dùng
         color: 'border-purple-200 hover:border-purple-500'
     },
     {
@@ -47,132 +35,152 @@ const PLANS: Plan[] = [
         features: ['Tốc độ không giới hạn', 'Hỗ trợ 24/7', 'Bảo mật nâng cao'],
         recommend: false,
         color: 'border-yellow-200 hover:border-yellow-500'
-    }
+    },
 ];
-
-// 2. Định nghĩa Interface cho Props của component PaymentButton
-interface PaymentButtonProps {
-    label: string;
-    desc: string;
-    onClick: () => void;
-    color: 'pink' | 'blue'; // Chỉ định rõ các màu được hỗ trợ
-}
 
 export default function PaymentPage() {
     const { user } = useAuth();
-
+    // Thay đổi: Lưu ID của gói đang xử lý thay vì true/false chung chung
     const [processingPlanId, setProcessingPlanId] = useState<string | null>(null);
-    // Thay đổi từ any sang Plan | null
-    const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
-    const [showModal, setShowModal] = useState(false);
 
-
-    // Khai báo kiểu Plan cho tham số truyền vào
-    const handleSelectPlan = (plan: Plan) => {
+    const handleBuy = async (planId: string) => {
         if (!user) {
-            Swal.fire('Chưa đăng nhập', 'Vui lòng đăng nhập để tiếp tục', 'warning');
+            Swal.fire({
+                icon: 'warning',
+                title: 'Chưa đăng nhập',
+                text: 'Vui lòng đăng nhập để thực hiện nâng cấp!',
+                confirmButtonText: 'Đăng nhập ngay'
+            });
             return;
         }
-        setSelectedPlan(plan);
-        setShowModal(true);
-    };
-
-    const handlePay = async (method: 'momo' | 'zalopay') => {
-        if (!selectedPlan || !user) return;
 
         try {
-            setProcessingPlanId(selectedPlan.id);
-            const res =
-                method === 'momo'
-                    ? await userApi.createMomoPayment(String(user), selectedPlan.id)
-                    : await userApi.createZaloPayPayment(String(user), selectedPlan.id);
+            // Set gói đang loading
+            setProcessingPlanId(planId);
+            
+            const res = await userApi.createMomoPayment(user, planId);
+            const data = res.data;
 
-            window.location.href = res.data.payUrl;
-        } catch (err) {
-            console.error(err);
-            Swal.fire('Lỗi', 'Không thể tạo thanh toán', 'error');
-            setProcessingPlanId(null);
+            if (data.payUrl) {
+                window.location.href = data.payUrl;
+            } else {
+                Swal.fire('Lỗi', 'Server không trả về link thanh toán.', 'error');
+                setProcessingPlanId(null); // Reset nếu lỗi logic
+            }
+
+        } catch (err: unknown) {
+            setProcessingPlanId(null); // Reset khi có lỗi
+            let errorMsg = 'Thanh toán thất bại: Lỗi kết nối API.';
+
+            if (typeof err === 'object' && err !== null && 'response' in err) {
+                const response = (err as { response: { data?: { message?: string }, status?: number } }).response;
+                if (response?.data?.message) {
+                    errorMsg = `Lỗi: ${response.data.message}`;
+                } else if (response?.status) {
+                    errorMsg = `Lỗi HTTP ${response.status}. Vui lòng thử lại.`;
+                }
+            }
+            Swal.fire({
+                icon: 'error',
+                title: 'Giao dịch thất bại',
+                text: errorMsg,
+            });
         }
+        // Lưu ý: Không cần finally set null nếu chuyển trang thành công, 
+        // nhưng nếu ở lại trang thì cần handle kỹ. Ở đây catch đã handle reset.
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-100 px-4 py-16">
+        <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 py-16 px-4 sm:px-6 lg:px-8">
             <div className="max-w-7xl mx-auto">
+                {/* Header */}
                 <div className="text-center mb-16">
-                    <span className="inline-block bg-blue-100 text-blue-700 text-xs font-semibold px-4 py-1 rounded-full">
-                        NÂNG CẤP TÀI KHOẢN
+                    <span className="bg-blue-100 text-blue-800 text-xs font-semibold px-3 py-1 rounded-full uppercase tracking-wide">
+                        Nâng cấp tài khoản
                     </span>
-                    <h1 className="mt-4 text-4xl font-extrabold text-gray-900">
-                        Chọn gói lưu trữ
+                    <h1 className="mt-4 text-4xl font-extrabold text-gray-900 sm:text-5xl">
+                        Mở rộng không gian lưu trữ
                     </h1>
-                    <p className="mt-4 text-gray-600">
-                        Xin chào <b className="text-blue-600">{user}</b>, chọn gói phù hợp để tiếp tục
+                    <p className="mt-4 text-xl text-gray-500 max-w-2xl mx-auto">
+                        Xin chào <span className="font-bold text-blue-600">{user}</span>, hãy chọn gói phù hợp để lưu trữ dữ liệu an toàn và tiện lợi hơn.
                     </p>
                 </div>
 
-                <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
+                {/* Pricing Grid */}
+                <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3 items-stretch">
                     {PLANS.map((plan) => {
                         const isLoading = processingPlanId === plan.id;
+                        const isAnyLoading = processingPlanId !== null;
+
                         return (
                             <div
                                 key={plan.id}
-                                className={`relative flex flex-col bg-white rounded-2xl shadow-lg border-2 transition hover:-translate-y-2 ${plan.color}`}
+                                // Thêm flex flex-col và h-full để thẻ kéo dài bằng nhau
+                                className={`relative flex flex-col h-full bg-white rounded-2xl shadow-lg transition-all duration-300 transform hover:-translate-y-2 hover:shadow-2xl border-2 ${plan.color} ${plan.recommend ? 'ring-2 ring-purple-400 ring-offset-2' : ''}`}
                             >
                                 {plan.recommend && (
-                                    <span className="absolute top-4 right-4 bg-purple-600 text-white text-xs px-3 py-1 rounded-full">
-                                        Phổ biến
-                                    </span>
+                                    <div className="absolute top-0 right-0 -mt-3 -mr-3 z-10">
+                                        <span className="bg-gradient-to-r from-purple-500 to-indigo-600 text-white text-xs font-bold px-3 py-1 rounded-full shadow-md">
+                                            Phổ biến nhất
+                                        </span>
+                                    </div>
                                 )}
 
+                                {/* Nội dung thẻ: dùng flex-1 để đẩy nút xuống dưới cùng */}
                                 <div className="p-8 flex-1 flex flex-col">
                                     <div className="flex justify-center mb-6">
-                                        {plan.icon}
+                                        <div className="p-4 bg-gray-50 rounded-full shadow-inner">
+                                            {plan.icon}
+                                        </div>
                                     </div>
 
-                                    <h3 className="text-xl font-bold text-center">
-                                        {plan.name}
-                                    </h3>
-
+                                    <h3 className="text-center text-2xl font-bold text-gray-800">{plan.name}</h3>
                                     <div className="text-center mt-4">
-                                        <span className="text-4xl font-extrabold">
+                                        <span className="text-4xl font-extrabold text-gray-900">
                                             {plan.price.toLocaleString('vi-VN')}
                                         </span>
-                                        <span className="text-gray-500"> đ</span>
+                                        <span className="text-gray-500 font-medium"> đ</span>
                                     </div>
+                                    <p className="text-center text-gray-500 mt-2 text-sm">Thanh toán 1 lần</p>
 
-                                    <div className="flex justify-center mt-3">
-                                        <span className="bg-blue-100 text-blue-700 text-xs px-3 py-1 rounded-full">
+                                    {/* Căn giữa badge Quota */}
+                                    <div className="flex justify-center mt-4">
+                                        <span className="bg-blue-100 text-blue-800 text-xs font-semibold px-3 py-1 rounded-full uppercase tracking-wide">
                                             {plan.quota}
                                         </span>
                                     </div>
 
-                                    <ul className="mt-6 space-y-3 flex-1">
-                                        {plan.features.map((f, i) => (
-                                            <li key={i} className="flex text-gray-600 text-sm">
-                                                <FaCheck className="text-green-500 mr-2 mt-1" />
-                                                {f}
+                                    {/* Features List: mb-8 để tạo khoảng cách với nút */}
+                                    <ul className="mt-8 mb-8 space-y-4 flex-1">
+                                        {plan.features.map((feature, index) => (
+                                            <li key={index} className="flex items-start text-gray-600">
+                                                <FaCheck className="text-green-500 mr-3 mt-1 flex-shrink-0" />
+                                                <span className="text-sm">{feature}</span>
                                             </li>
                                         ))}
                                     </ul>
 
+                                    {/* Button: mt-auto để luôn nằm ở đáy */}
                                     <button
-                                        onClick={() => handleSelectPlan(plan)}
-                                        disabled={processingPlanId !== null}
-                                        className={`mt-6 w-full py-4 rounded-xl font-bold text-white flex justify-center gap-2
-                                            ${isLoading
-                                                ? 'bg-gray-400 cursor-not-allowed'
-                                                : plan.recommend
-                                                    ? 'bg-gradient-to-r from-purple-600 to-indigo-600'
-                                                    : 'bg-gradient-to-r from-blue-500 to-cyan-500'
+                                        onClick={() => handleBuy(plan.id)}
+                                        disabled={isAnyLoading}
+                                        className={`mt-auto w-full py-4 rounded-xl text-white font-bold shadow-lg transition-all duration-200 flex items-center justify-center gap-2
+                                            ${isAnyLoading && !isLoading
+                                                ? 'bg-gray-300 cursor-not-allowed opacity-50' // Style cho các nút KHÔNG được bấm
+                                                : isLoading 
+                                                    ? 'bg-gray-400 cursor-not-allowed' // Style cho nút ĐANG bấm
+                                                    : plan.recommend
+                                                        ? 'bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700'
+                                                        : 'bg-gradient-to-r from-blue-500 to-cyan-500 hover:from-blue-600 hover:to-cyan-600'
                                             }`}
                                     >
                                         {isLoading ? (
                                             <>
-                                                <FaSpinner className="animate-spin" /> Đang xử lý
+                                                <FaSpinner className="animate-spin text-lg" /> Đang xử lý...
                                             </>
                                         ) : (
                                             <>
-                                                <FaCloudUploadAlt /> Mua ngay
+                                                <FaCloudUploadAlt className="text-lg" /> Mua ngay
                                             </>
                                         )}
                                     </button>
@@ -182,60 +190,6 @@ export default function PaymentPage() {
                     })}
                 </div>
             </div>
-
-            {showModal && selectedPlan && (
-                <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center">
-                    <div className="bg-white rounded-2xl w-full max-w-md p-6">
-                        <div className="flex justify-between items-center mb-4">
-                            <h3 className="font-bold text-lg">
-                                Chọn phương thức thanh toán
-                            </h3>
-                            <button onClick={() => setShowModal(false)}>
-                                <FaTimes />
-                            </button>
-                        </div>
-
-                        <div className="space-y-4">
-                            <PaymentButton
-                                color="pink"
-                                label="Ví MoMo"
-                                desc="Thanh toán nhanh qua MoMo"
-                                onClick={() => handlePay('momo')}
-                            />
-
-                            <PaymentButton
-                                color="blue"
-                                label="ZaloPay"
-                                desc="Thanh toán qua ZaloPay"
-                                onClick={() => handlePay('zalopay')}
-                            />
-                        </div>
-                    </div>
-                </div>
-            )}
         </div>
-    );
-}
-
-// 3. Sử dụng Interface PaymentButtonProps cho component
-function PaymentButton({
-    label,
-    desc,
-    onClick,
-    color
-}: PaymentButtonProps) {
-    return (
-        <button
-            onClick={onClick}
-            className={`w-full flex items-center gap-4 p-4 rounded-xl border hover:border-${color}-500 transition`}
-        >
-            <div className={`w-12 h-12 flex items-center justify-center rounded-full bg-${color}-100 text-${color}-600`}>
-                <FaWallet />
-            </div>
-            <div className="text-left">
-                <p className="font-bold">{label}</p>
-                <p className="text-sm text-gray-500">{desc}</p>
-            </div>
-        </button>
     );
 }

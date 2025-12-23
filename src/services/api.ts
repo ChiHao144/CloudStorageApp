@@ -127,22 +127,6 @@ export const userApi = {
         return api.post('/upgrade-account', formData);
     },
 
-    // Thanh toán với ZaloPay
-    createZaloPayPayment: (username: string, plan: string) => {
-        const formData = new FormData();
-        formData.append('username', username);
-        formData.append('plan', plan);
-        return api.post('/payment/zalopay/create', formData);
-    },
-
-    // Xác nhận thanh toán ZaloPay (Gọi ở trang Callback)
-    confirmZaloPayPayment: (appTransId: string, status: string) => {
-        const formData = new FormData();
-        formData.append('appTransId', appTransId);
-        formData.append('status', status);
-        return api.post('/payment/zalopay/callback', formData);
-    },
-
     // --- USER PROFILE (MỚI từ user.py) ---
     getProfile: (username: string, password: string) => {
         const formData = new URLSearchParams();
@@ -192,6 +176,14 @@ export const userApi = {
         formData.append('can_edit', String(canEdit));
         return api.post('/share/share-to-user', formData);
     },
+
+    confirmZaloPayPayment: (appTransId: string, status: string) => {
+        const formData = new FormData();
+        formData.append('appTransId', appTransId);
+        formData.append('status', status);
+        return api.post('/payment/zalopay/callback', formData);
+    },
+
     moveFileToFolder: (username: string, password: string, sourcePath: string, destPath: string) => {
         const formData = new FormData();
         formData.append('username', username);
@@ -199,7 +191,7 @@ export const userApi = {
         formData.append('source_path', sourcePath);
         formData.append('destination_path', destPath);
         return api.post('/move', formData);
-    }
+    },
 };
 
 export default api;

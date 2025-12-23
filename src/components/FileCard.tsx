@@ -1,5 +1,6 @@
 import React from 'react';
 import { FaFolder, FaFileAlt, FaFileImage, FaFileVideo } from 'react-icons/fa';
+// 1. Import thêm icon FiMove
 import { FiMove } from 'react-icons/fi';
 
 interface FileCardProps {
@@ -10,28 +11,46 @@ interface FileCardProps {
     onDelete?: (e: React.MouseEvent) => void;
     onDownload?: (e: React.MouseEvent) => void;
     onShare?: (e: React.MouseEvent) => void;
+    // 2. Thêm prop onMove vào interface
     onMove?: (e: React.MouseEvent) => void;
 }
 
 const getIconByType = (type: string, name: string) => {
-    if (type === 'directory') return <FaFolder className="text-yellow-400 w-10 h-10" />;
+    if (type === 'directory') {
+        return <FaFolder className="text-yellow-400 w-10 h-10" />;
+    }
 
     const lowerName = name.toLowerCase();
-    if (lowerName.match(/\.(jpg|jpeg|png|gif)$/)) return <FaFileImage className="text-purple-500 w-10 h-10" />;
-    if (lowerName.match(/\.(mp4|mov|avi)$/)) return <FaFileVideo className="text-red-500 w-10 h-10" />;
-    return <FaFileAlt className="text-blue-400 w-10 h-10" />;
-};
+    if (lowerName.match(/\.(jpg|jpeg|png|gif)$/)) {
+        return <FaFileImage className="text-purple-500 w-10 h-10" />;
+    }
+    if (lowerName.match(/\.(mp4|mov|avi)$/)) {
+        return <FaFileVideo className="text-red-500 w-10 h-10" />;
+    }
 
-export default function FileCard({ name, size, type, modified, onDelete, onDownload, onShare, onMove }: FileCardProps) {
+    return <FaFileAlt className="text-blue-400 w-10 h-10" />;
+}
+
+export default function FileCard({ 
+    name, 
+    size, 
+    type, 
+    modified, 
+    onDelete, 
+    onDownload, 
+    onShare,
+    onMove // 3. Destructure onMove
+}: FileCardProps) {
     const displaySize = type === 'file' ? size : 'Folder';
 
     return (
         <div className="group relative bg-white p-4 rounded-xl border border-gray-200 shadow-sm hover:shadow-md hover:border-blue-300 transition-all duration-200 cursor-pointer flex flex-col gap-3 h-full">
             
-            {/* Action buttons */}
-            {(onDelete || onDownload || onShare || onMove) && (
+            {/* 4. Cập nhật điều kiện hiển thị thanh công cụ bao gồm cả onMove */}
+            {(onDelete || (type === 'file' && onDownload) || onShare || onMove) && (
                 <div className="absolute bottom-1.5 right-1.5 flex gap-2 opacity-0 group-hover:opacity-100 transition-all z-10">
-
+                    
+                    {/* 5. Thêm nút Di chuyển */}
                     {onMove && (
                         <button
                             onClick={onMove}
@@ -45,11 +64,16 @@ export default function FileCard({ name, size, type, modified, onDelete, onDownl
                     {onShare && (
                         <button
                             onClick={onShare}
-                            className="p-1.5 rounded-full bg-white text-gray-400 hover:text-blue-500 hover:bg-blue-50 shadow-sm border border-gray-100"
+                            className="p-1.5 rounded-full bg-white text-gray-400 hover:text-green-500 hover:bg-green-50 shadow-sm border border-gray-100"
                             title="Chia sẻ"
                         >
-                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 448 512" className="h-4 w-4" fill="currentColor">
-                                <path d="M352 320c-22.6 0-43.4 9.4-58.3 24.6L154.6 256.1c1.1-5.3 1.7-10.7 1.7-16.1s-.6-10.8-1.7-16.1l139.1-88.5C308.6 150.6 329.4 160 352 160c53 0 96-43 96-96S405-32 352-32s-96 43-96 96c0 5.4.6 10.8 1.7 16.1L118.6 168.6C103.7 153.4 82.9 144 60.3 144 7.3 144-35.7 187-35.7 240s43 96 96 96c22.6 0 43.4-9.4 58.3-24.6l139.1 88.5c-1.1 5.1-1.7 10.5-1.7 15.9 0 53 43 96 96 96s96-43 96-96-43-96-96-96z"/>
+                            <svg
+                                xmlns="http://www.w3.org/2000/svg"
+                                viewBox="0 0 448 512"
+                                className="h-4 w-4"
+                                fill="currentColor"
+                            >
+                                <path d="M352 320c-22.6 0-43.4 9.4-58.3 24.6L154.6 256.1c1.1-5.3 1.7-10.7 1.7-16.1s-.6-10.8-1.7-16.1l139.1-88.5C308.6 150.6 329.4 160 352 160c53 0 96-43 96-96S405 -32 352-32s-96 43-96 96c0 5.4.6 10.8 1.7 16.1L118.6 168.6C103.7 153.4 82.9 144 60.3 144 7.3 144-35.7 187-35.7 240s43 96 96 96c22.6 0 43.4-9.4 58.3-24.6l139.1 88.5c-1.1 5.1-1.7 10.5-1.7 15.9 0 53 43 96 96 96s96-43 96-96-43-96-96-96z" />
                             </svg>
                         </button>
                     )}
@@ -57,7 +81,7 @@ export default function FileCard({ name, size, type, modified, onDelete, onDownl
                     {onDownload && (
                         <button
                             onClick={onDownload}
-                            className="p-1.5 rounded-full bg-white text-gray-400 hover:text-indigo-500 hover:bg-indigo-50 shadow-sm border border-gray-100"
+                            className="p-1.5 rounded-full bg-white text-gray-400 hover:text-blue-500 hover:bg-blue-50 shadow-sm border border-gray-100"
                             title="Tải về"
                         >
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none"
@@ -83,18 +107,20 @@ export default function FileCard({ name, size, type, modified, onDelete, onDownl
                     )}
                 </div>
             )}
-
-            {/* File icon and type */}
+            
             <div className="flex items-start justify-between">
-                <div className="group-hover:scale-110 transition-transform duration-200">{getIconByType(type, name)}</div>
+                <div className="group-hover:scale-110 transition-transform duration-200">
+                    {getIconByType(type, name)}
+                </div>
                 <div className={`text-xs px-2 py-1 rounded-full font-medium ${type === 'directory' ? 'bg-yellow-50 text-yellow-700' : 'bg-blue-50 text-blue-600'}`}>
                     {type === 'directory' ? 'Thư mục' : 'File'}
                 </div>
             </div>
 
-            {/* Name & size */}
             <div className="flex-1">
-                <h3 className="font-semibold text-gray-800 truncate" title={name}>{name}</h3>
+                <h3 className="font-semibold text-gray-800 truncate" title={name}>
+                    {name}
+                </h3>
                 <div className="flex justify-between items-end mt-2">
                     <span className="text-sm text-gray-500 font-medium">{displaySize}</span>
                 </div>
