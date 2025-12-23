@@ -5,7 +5,6 @@ import { useCallback, useEffect, useState } from 'react';
 import { userApi } from '../services/api';
 import { PiHandWavingBold } from "react-icons/pi";
 import Swal from 'sweetalert2';
-import { FaShareAlt } from 'react-icons/fa';
 
 const formatBytes = (bytes: number | string, decimals = 2) => {
     const numBytes = typeof bytes === 'string' ? parseInt(bytes) : bytes;
@@ -41,21 +40,9 @@ interface FileItem {
     name?: string; size: number | string; path: string; type: string; modified: string;
 }
 
-interface ShareItem {
-    id: number;
-    share_type: number;
-    url?: string;
-    token?: string;
-    share_with_displayname?: string;
-    share_with?: string;
-}
 
-interface ExtendedSharingItem {
-    name?: string;
-    path: string;
-    displayName: string;
-    fullPath: string;
-}
+
+
 
 export default function Dashboard() {
     const { user, isAuthenticated } = useAuth();
@@ -65,16 +52,16 @@ export default function Dashboard() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [currentPath, setCurrentPath] = useState('');
-    const [previewContent, setPreviewContent] = useState<string | null>(null);
-    const [previewType, setPreviewType] = useState<'image' | 'video' | 'text' | 'pdf' | null>(null);
-    const [viewLoading, setViewLoading] = useState(false);
+    const [, setPreviewContent] = useState<string | null>(null);
+    const [, setPreviewType] = useState<'image' | 'video' | 'text' | 'pdf' | null>(null);
+    const [, setViewLoading] = useState(false);
 
-    const [sharingItem, setSharingItem] = useState<unknown>(null);
-    const [isShareModalOpen, setIsShareModalOpen] = useState(false);
-    const [currentShares, setCurrentShares] = useState<unknown[]>([]);
+    const [, setSharingItem] = useState<unknown>(null);
+    const [, setIsShareModalOpen] = useState(false);
+    const [, setCurrentShares] = useState<unknown[]>([]);
 
-    const [targetUser, setTargetUser] = useState('');
-    const [canEditShare, setCanEditShare] = useState(false);
+    
+    const [,] = useState(false);
 
     const [isMoveModalOpen, setIsMoveModalOpen] = useState(false);
     const [movingItem, setMovingItem] = useState<FileItem | null>(null);
@@ -102,14 +89,24 @@ export default function Dashboard() {
 
             // --- XỬ LÝ QUOTA ---
             const isQuotaResponseValid = (data: unknown): data is { quota: QuotaData } => {
-                return (
-                    typeof data === 'object' &&
-                    data !== null &&
-                    'quota' in data &&
-                    typeof (data as any).quota === 'object' &&
-                    (data as any).quota !== null &&
-                    'used' in (data as any).quota
-                );
+                // 1. Kiểm tra data có phải là object và không null
+                if (typeof data !== 'object' || data === null) {
+                    return false;
+                }
+
+                // 2. Ép kiểu tạm thời sang Record để truy cập thuộc tính một cách an toàn
+                const candidate = data as Record<string, unknown>;
+
+                // 3. Kiểm tra thuộc tính 'quota' có tồn tại và là object không null
+                const quota = candidate.quota;
+                if (typeof quota !== 'object' || quota === null) {
+                    return false;
+                }
+
+                // 4. Ép kiểu quota để kiểm tra thuộc tính bên trong (ví dụ: 'used')
+                const quotaObj = quota as Record<string, unknown>;
+
+                return 'used' in quotaObj;
             };
 
             if (quotaRes.status === 'fulfilled' && isQuotaResponseValid(quotaRes.value.data)) {
@@ -227,60 +224,6 @@ export default function Dashboard() {
         }
     };
 
-    const handleShareToUser = async () => {
-        if (!targetUser.trim()) {
-            Swal.fire('Thông báo', 'Vui lòng nhập tên người dùng cần chia sẻ', 'info');
-            return;
-        }
-        const password = localStorage.getItem('password');
-        const item = sharingItem as ExtendedSharingItem;
-        if (!user || !password || !item) return;
-
-        try {
-            await userApi.shareToUser(user, password, item.fullPath, targetUser, canEditShare);
-            Swal.fire('Thành công!', `Đã chia sẻ với người dùng ${targetUser}`, 'success');
-            setTargetUser('');
-            const updated = await userApi.listShares(user, password, item.fullPath);
-            setCurrentShares(Array.isArray(updated.data) ? updated.data : []);
-        } catch (err: unknown) {
-            Swal.fire('Lỗi', getErrorMessage(err), 'error');
-        }
-    };
-
-    const handleCreatePublicShare = async () => {
-        const password = localStorage.getItem('password');
-        const item = sharingItem as ExtendedSharingItem;
-        if (!user || !password || !item) return;
-
-        try {
-            const res = await userApi.sharePublic(user, password, item.fullPath);
-            const data = res.data as { url: string };
-            Swal.fire({
-                title: 'Thành công!',
-                text: `Link chia sẻ: ${data.url}`,
-                icon: 'success',
-                confirmButtonText: 'Sao chép link'
-            }).then((result) => { if (result.isConfirmed) navigator.clipboard.writeText(data.url); });
-
-            const updated = await userApi.listShares(user, password, item.fullPath);
-            setCurrentShares(Array.isArray(updated.data) ? updated.data : []);
-        } catch (err: unknown) {
-            Swal.fire('Lỗi', getErrorMessage(err), 'error');
-        }
-    };
-
-    const handleDeleteShare = async (shareId: number) => {
-        const password = localStorage.getItem('password');
-        if (!user || !password) return;
-        try {
-            await userApi.deleteShare(user, password, shareId);
-            setCurrentShares(currentShares.filter(s => (s as { id: number }).id !== shareId));
-            Swal.fire('Đã xóa', 'Đã hủy quyền chia sẻ thành công.', 'success');
-        } catch {
-            Swal.fire('Lỗi', 'Không thể xóa chia sẻ.', 'error');
-        }
-    };
-
     /** Delete & download handlers */
     const handleDelete = async (e: React.MouseEvent, item: FileItem) => {
         e.stopPropagation();
@@ -365,7 +308,7 @@ export default function Dashboard() {
         if (!currentPath) return;
         const parts = currentPath.split('/'); parts.pop(); setCurrentPath(parts.join('/'));
     };
-    const closePreview = () => { setPreviewContent(null); setPreviewType(null); };
+    
 
     if (!user) return null;
     const usedSpace = quota?.used ? parseInt(quota.used) : 0;

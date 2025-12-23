@@ -4,8 +4,20 @@ import { userApi } from '@/services/api';
 import Swal from 'sweetalert2';
 import { FaHdd, FaRocket, FaCrown, FaCheck, FaCloudUploadAlt, FaSpinner, FaWallet, FaTimes } from 'react-icons/fa';
 
-// Cấu hình danh sách gói với chi tiết hiển thị
-const PLANS = [
+// 1. Định nghĩa Interface cho cấu trúc của một Gói (Plan)
+interface Plan {
+    id: string;
+    name: string;
+    price: number;
+    quota: string;
+    icon: JSX.Element;
+    features: string[];
+    recommend: boolean;
+    color: string;
+}
+
+// Cấu hình danh sách gói với kiểu dữ liệu Plan[]
+const PLANS: Plan[] = [
     {
         id: 'basic',
         name: 'Gói Basic',
@@ -23,7 +35,7 @@ const PLANS = [
         quota: '10GB',
         icon: <FaRocket className="text-4xl text-purple-500" />,
         features: ['Tốc độ tải nhanh', 'Ưu tiên hỗ trợ', 'Sao lưu tự động'],
-        recommend: true, // Gói được khuyên dùng
+        recommend: true,
         color: 'border-purple-200 hover:border-purple-500'
     },
     {
@@ -38,15 +50,25 @@ const PLANS = [
     }
 ];
 
+// 2. Định nghĩa Interface cho Props của component PaymentButton
+interface PaymentButtonProps {
+    label: string;
+    desc: string;
+    onClick: () => void;
+    color: 'pink' | 'blue'; // Chỉ định rõ các màu được hỗ trợ
+}
+
 export default function PaymentPage() {
     const { user } = useAuth();
 
     const [processingPlanId, setProcessingPlanId] = useState<string | null>(null);
-    const [selectedPlan, setSelectedPlan] = useState<any>(null);
+    // Thay đổi từ any sang Plan | null
+    const [selectedPlan, setSelectedPlan] = useState<Plan | null>(null);
     const [showModal, setShowModal] = useState(false);
 
 
-    const handleSelectPlan = (plan: any) => {
+    // Khai báo kiểu Plan cho tham số truyền vào
+    const handleSelectPlan = (plan: Plan) => {
         if (!user) {
             Swal.fire('Chưa đăng nhập', 'Vui lòng đăng nhập để tiếp tục', 'warning');
             return;
@@ -56,6 +78,8 @@ export default function PaymentPage() {
     };
 
     const handlePay = async (method: 'momo' | 'zalopay') => {
+        if (!selectedPlan || !user) return;
+
         try {
             setProcessingPlanId(selectedPlan.id);
             const res =
@@ -74,8 +98,6 @@ export default function PaymentPage() {
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-100 px-4 py-16">
             <div className="max-w-7xl mx-auto">
-
-                {/* HEADER */}
                 <div className="text-center mb-16">
                     <span className="inline-block bg-blue-100 text-blue-700 text-xs font-semibold px-4 py-1 rounded-full">
                         NÂNG CẤP TÀI KHOẢN
@@ -88,7 +110,6 @@ export default function PaymentPage() {
                     </p>
                 </div>
 
-                {/* PRICING */}
                 <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
                     {PLANS.map((plan) => {
                         const isLoading = processingPlanId === plan.id;
@@ -164,7 +185,7 @@ export default function PaymentPage() {
 
             {showModal && selectedPlan && (
                 <div className="fixed inset-0 z-50 bg-black/50 flex items-center justify-center">
-                    <div className="bg-white rounded-2xl w-full max-w-md p-6 animate-scaleIn">
+                    <div className="bg-white rounded-2xl w-full max-w-md p-6">
                         <div className="flex justify-between items-center mb-4">
                             <h3 className="font-bold text-lg">
                                 Chọn phương thức thanh toán
@@ -196,12 +217,13 @@ export default function PaymentPage() {
     );
 }
 
+// 3. Sử dụng Interface PaymentButtonProps cho component
 function PaymentButton({
     label,
     desc,
     onClick,
     color
-}: any) {
+}: PaymentButtonProps) {
     return (
         <button
             onClick={onClick}
